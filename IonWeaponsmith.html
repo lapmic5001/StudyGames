@@ -1,206 +1,355 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <title>Ion Weaponsmith - Polyatomic Mastery</title>
-        <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
-        <style>
-            body {
-                font-family: "Press Start 2P", cursive;
-                background: #000;
-                color: #fff;
-                text-align: center;
-                padding: 20px;
-            }
-            h1 {
-                margin-bottom: 10px;
-            }
-            #moneyCounter,
-            #ordersPanel {
-                font-size: 1.5em;
-                margin-bottom: 20px;
-            }
-            #moneyCounter img {
-                vertical-align: middle;
-                width: 16px;
-                height: 16px;
-                margin-left: 5px;
-            }
-            select,
-            button,
-            input {
-                font-family: "Press Start 2P", cursive;
-                font-size: 1em;
-                padding: 10px;
-                margin: 10px;
-                background: #222;
-                color: #fff;
-                border: 2px solid #fff;
-                cursor: pointer;
-            }
-            input {
-                width: 200px;
-                text-align: center;
-            }
-            button:disabled {
-                opacity: 0.5;
-                cursor: not-allowed;
-            }
-            #progressBar,
-            #orderProgress {
-                width: 300px;
-                height: 20px;
-                border: 2px solid #fff;
-                margin: 10px auto;
-                background: #222;
-                position: relative;
-            }
-            #progressFill,
-            #orderFill {
-                height: 100%;
-                background: #0f0;
-                width: 0%;
-            }
-            #message,
-            #ordersList {
-                font-size: 1em;
-                margin-top: 10px;
-            }
-        </style>
-    </head>
-    <body>
-        <h1>Ion Weaponsmith</h1>
-        <div id="moneyCounter">
-            Ionites: <span id="ionites">100</span>
-            <img src="ionite_icon.png" alt="Ionite Icon" />
+  <head>
+    <meta charset="UTF-8">
+    <title>Ion Weaponsmith - Polyatomic Mastery</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+      /* Global Styles */
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: "Press Start 2P", cursive;
+        background: #000;
+        color: #fff;
+      }
+      #moneyCounter {
+        text-align: center;
+        padding: 10px;
+        font-size: 1.5em;
+        background: #111;
+      }
+      #moneyCounter img {
+        vertical-align: middle;
+        width: 16px;
+        height: 16px;
+        margin-left: 5px;
+      }
+      /* Container layout: left (shop), center (game area), right (orders) */
+      #container {
+        display: flex;
+        height: calc(100vh - 60px); /* leaving room for money counter */
+      }
+      #shopPanel, #ordersPanel {
+        width: 20%;
+        background: red;  /* Like the red sides of the Canadian flag */
+        padding: 10px;
+        box-sizing: border-box;
+        overflow-y: auto;
+      }
+      #gameArea {
+        flex: 1;
+        background: #111;
+        padding: 20px;
+        box-sizing: border-box;
+        text-align: center;
+      }
+      h2 {
+        margin-top: 0;
+      }
+      button, input, select {
+        font-family: "Press Start 2P", cursive;
+        font-size: 0.8em;
+        padding: 10px;
+        margin: 10px 5px;
+        background: #222;
+        color: #fff;
+        border: 2px solid #fff;
+        cursor: pointer;
+      }
+      input {
+        width: 180px;
+        text-align: center;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      /* Order timer progress bar */
+      #orderTimerBar {
+        width: 100%;
+        height: 20px;
+        border: 2px solid #fff;
+        background: #222;
+        margin: 10px auto;
+        position: relative;
+      }
+      #orderFill {
+        height: 100%;
+        background: #0f0;
+        width: 0%;
+      }
+      #message {
+        margin-top: 10px;
+        font-size: 1em;
+      }
+      /* Shop Upgrade Items */
+      .upgradeItem {
+        margin-bottom: 20px;
+        text-align: center;
+      }
+      .upgradeItem img {
+        width: 50px;
+        height: 50px;
+        display: block;
+        margin: 0 auto 5px auto;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Top Money Counter -->
+    <div id="moneyCounter">
+      Ionites: <span id="ionites">100</span>
+      <img src="images/ionite_icon.png" alt="Ionite Icon">
+    </div>
+    <!-- Main Container -->
+    <div id="container">
+      <!-- Shop Panel (Left) -->
+      <div id="shopPanel">
+        <h2>Shop</h2>
+        <!-- Contract Upgrade Item -->
+        <div class="upgradeItem">
+          <img src="images/contract_upgrade.png" alt="Contract Upgrade">
+          <div>Contract Upgrade</div>
+          <div>Level: <span id="contractLevel">I</span></div>
+          <div>Cost: <span id="contractCost">50</span> Ionites</div>
+          <button id="contractUpgradeButton">Upgrade</button>
         </div>
-
-        <div>
-            <label for="ionSelect">Bullet Type (Ion):</label>
-            <select id="ionSelect"></select>
+        <!-- Forge Upgrade Item -->
+        <div class="upgradeItem">
+          <img src="images/forge_upgrade.png" alt="Forge Upgrade">
+          <div>Forge Upgrade</div>
+          <div>Level: <span id="forgeLevel">I</span></div>
+          <div>Cost: <span id="forgeCost">50</span> Ionites</div>
+          <button id="forgeUpgradeButton">Upgrade</button>
         </div>
-
-        <div>
-            <input type="text" id="formulaInput" placeholder="Enter Formula (e.g. NH4+1)" />
-            <button id="synthesizeButton">Synthesize</button>
-            <button id="revealButton">Reveal Recipe (-5 Ionites)</button>
-        </div>
-
-        <div id="progressBar">
-            <div id="progressFill"></div>
-        </div>
-
-        <div id="ordersPanel">
-            <h2>Orders</h2>
-            <div id="ordersList"></div>
-        </div>
-
+        <!-- (Additional upgrades can be added here) -->
+      </div>
+      <!-- Game Area (Center) -->
+      <div id="gameArea">
+        <h2>Fulfill Order</h2>
+        <!-- (Instructions can be placed here) -->
+        <input type="text" id="formulaInput" placeholder="Enter Formula">
+        <button id="submitFormulaButton">Submit</button>
+        <button id="revealButton">Reveal Recipe (-5 Ionites)</button>
         <div id="message"></div>
+      </div>
+      <!-- Orders Panel (Right) -->
+      <div id="ordersPanel">
+        <h2>Orders</h2>
+        <div id="ordersDisplay">No active order.</div>
+        <div id="orderTimerBar">
+          <div id="orderFill"></div>
+        </div>
+        <button id="fulfillOrderButton" disabled>Manual Fulfill</button>
+      </div>
+    </div>
+    <script>
+      /* ----- Data Definitions ----- */
+      // Polyatomic ion definitions
+      const ions = [
+        { name: "Ammonium",    formula: "NH4+1",   charge: 1,  synthesisTime: 5000, sellPrice: 12 },
+        { name: "Acetate",     formula: "C2H3O2-1", charge: -1, synthesisTime: 5500, sellPrice: 15 },
+        { name: "Bicarbonate", formula: "HCO3-1",   charge: -1, synthesisTime: 5300, sellPrice: 14 },
+        { name: "Bromate",     formula: "BrO3-1",   charge: -1, synthesisTime: 5700, sellPrice: 16 },
+        { name: "Cyanide",     formula: "CN-1",     charge: -1, synthesisTime: 5100, sellPrice: 13 },
+        { name: "Hydroxide",   formula: "OH-1",     charge: -1, synthesisTime: 4900, sellPrice: 11 },
+        { name: "Nitrate",     formula: "NO3-1",    charge: -1, synthesisTime: 6000, sellPrice: 18 },
+        { name: "Nitrite",     formula: "NO2-1",    charge: -1, synthesisTime: 5800, sellPrice: 15 },
+        { name: "Thiocyanate", formula: "SCN-1",    charge: -1, synthesisTime: 5600, sellPrice: 14 },
+        { name: "Carbonate",   formula: "CO3-2",    charge: -2, synthesisTime: 6500, sellPrice: 25 },
+        { name: "Chromate",    formula: "CrO4-2",   charge: -2, synthesisTime: 6700, sellPrice: 28 },
+        { name: "Peroxide",    formula: "O2-2",     charge: -2, synthesisTime: 6200, sellPrice: 22 },
+        { name: "Sulfate",     formula: "SO3-2",    charge: -2, synthesisTime: 6600, sellPrice: 26 },
+        { name: "Sulfite",     formula: "SO2-2",    charge: -2, synthesisTime: 6400, sellPrice: 24 },
+        { name: "Tartrate",    formula: "C4H4O6-2", charge: -2, synthesisTime: 6800, sellPrice: 30 },
+        { name: "Borate",      formula: "BO3-3",    charge: -3, synthesisTime: 7200, sellPrice: 35 },
+        { name: "Citrate",     formula: "C6H5O7-3", charge: -3, synthesisTime: 7500, sellPrice: 38 },
+        { name: "Phosphate",   formula: "PO4-3",    charge: -3, synthesisTime: 7300, sellPrice: 36 },
+        { name: "Phosphite",   formula: "PO3-3",    charge: -3, synthesisTime: 7100, sellPrice: 34 },
+        { name: "Silicate",    formula: "SiO4-4",   charge: -4, synthesisTime: 8000, sellPrice: 45 }
+      ];
 
-        <script>
-            const ions = [
-                { name: "Ammonium", formula: "NH4+1", charge: 1, synthesisTime: 1500, sellPrice: 12 },
-                { name: "Acetate", formula: "C2H3O2-1", charge: -1, synthesisTime: 1800, sellPrice: 15 },
-                { name: "Bicarbonate", formula: "HCO3-1", charge: -1, synthesisTime: 1700, sellPrice: 14 },
-                { name: "Bromate", formula: "BrO3-1", charge: -1, synthesisTime: 1900, sellPrice: 16 },
-                { name: "Cyanide", formula: "CN-1", charge: -1, synthesisTime: 1400, sellPrice: 13 },
-                { name: "Hydroxide", formula: "OH-1", charge: -1, synthesisTime: 1300, sellPrice: 11 },
-                { name: "Nitrate", formula: "NO3-1", charge: -1, synthesisTime: 2000, sellPrice: 18 },
-                { name: "Nitrite", formula: "NO2-1", charge: -1, synthesisTime: 1800, sellPrice: 15 },
-                { name: "Thiocyanate", formula: "SCN-1", charge: -1, synthesisTime: 1600, sellPrice: 14 },
-                { name: "Carbonate", formula: "CO3-2", charge: -2, synthesisTime: 2500, sellPrice: 25 },
-                { name: "Chromate", formula: "CrO4-2", charge: -2, synthesisTime: 2700, sellPrice: 28 },
-                { name: "Peroxide", formula: "O2-2", charge: -2, synthesisTime: 2200, sellPrice: 22 },
-                { name: "Sulfate", formula: "SO3-2", charge: -2, synthesisTime: 2600, sellPrice: 26 },
-                { name: "Sulfite", formula: "SO2-2", charge: -2, synthesisTime: 2400, sellPrice: 24 },
-                { name: "Tartrate", formula: "C4H4O6-2", charge: -2, synthesisTime: 2800, sellPrice: 30 },
-                { name: "Borate", formula: "BO3-3", charge: -3, synthesisTime: 3200, sellPrice: 35 },
-                { name: "Citrate", formula: "C6H5O7-3", charge: -3, synthesisTime: 3500, sellPrice: 38 },
-                { name: "Phosphate", formula: "PO4-3", charge: -3, synthesisTime: 3300, sellPrice: 36 },
-                { name: "Phosphite", formula: "PO3-3", charge: -3, synthesisTime: 3100, sellPrice: 34 },
-                { name: "Silicate", formula: "SiO4-4", charge: -4, synthesisTime: 4000, sellPrice: 45 }
-            ];
+      /* ----- Game State Variables ----- */
+      let ionites = 100;
+      let activeOrder = null; // current active order (only one allowed by default)
+      const orderTotalTime = 30000; // 30 seconds per order
+      let orderTimerInterval = null;
 
-            let ionites = 100;
-            let orders = [];
-            let maxOrders = 5;
-            let orderInterval = 15000;
+      // Upgrades
+      let contractLevel = 1; // determines how many orders can be active (default: 1)
+      let forgeLevel = 1;    // for future: determines parallel synthesis (default: 1)
 
-            const ionSelect = document.getElementById("ionSelect");
-            const synthesizeButton = document.getElementById("synthesizeButton");
-            const revealButton = document.getElementById("revealButton");
-            const formulaInput = document.getElementById("formulaInput");
-            const ionitesDisplay = document.getElementById("ionites");
-            const progressFill = document.getElementById("progressFill");
-            const messageDiv = document.getElementById("message");
-            const ordersList = document.getElementById("ordersList");
+      /* ----- DOM Elements ----- */
+      const ionitesDisplay = document.getElementById("ionites");
+      const messageDiv = document.getElementById("message");
+      const ordersDisplay = document.getElementById("ordersDisplay");
+      const orderFill = document.getElementById("orderFill");
+      const formulaInput = document.getElementById("formulaInput");
+      const submitFormulaButton = document.getElementById("submitFormulaButton");
+      const revealButton = document.getElementById("revealButton");
+      const fulfillOrderButton = document.getElementById("fulfillOrderButton");
 
-            function updateIonitesDisplay() {
-                ionitesDisplay.textContent = ionites;
-            }
+      // Shop Upgrade Elements
+      const contractUpgradeButton = document.getElementById("contractUpgradeButton");
+      const forgeUpgradeButton = document.getElementById("forgeUpgradeButton");
+      const contractLevelSpan = document.getElementById("contractLevel");
+      const forgeLevelSpan = document.getElementById("forgeLevel");
+      const contractCostSpan = document.getElementById("contractCost");
+      const forgeCostSpan = document.getElementById("forgeCost");
 
-            function addOrder() {
-                if (orders.length >= maxOrders) {
-                    alert("Too many unfulfilled orders! Game Over.");
-                    location.reload();
-                }
-                const ion = ions[Math.floor(Math.random() * ions.length)];
-                const quantity = Math.floor(Math.random() * 3) + 1;
-                const tip = Math.floor(Math.random() * 10);
-                const reward = ion.sellPrice * quantity + tip;
-                orders.push({ ion, quantity, remaining: quantity, reward });
-                renderOrders();
-            }
+      /* ----- Helper Functions ----- */
+      function toRoman(num) {
+        const romans = ["I", "II", "III", "IV", "V"];
+        return romans[num - 1] || num;
+      }
+      function updateIonitesDisplay() {
+        ionitesDisplay.textContent = ionites;
+      }
+      function updateUpgradesDisplay() {
+        contractLevelSpan.textContent = toRoman(contractLevel);
+        forgeLevelSpan.textContent = toRoman(forgeLevel);
+        contractCostSpan.textContent = contractLevel * 50;
+        forgeCostSpan.textContent = forgeLevel * 50;
+      }
+      function updateOrderDisplay() {
+        if (!activeOrder) {
+          ordersDisplay.textContent = "No active order.";
+          orderFill.style.width = "0%";
+          fulfillOrderButton.disabled = true;
+          return;
+        }
+        ordersDisplay.innerHTML = `Contractor ${activeOrder.contractor} requests ${activeOrder.quantity}x ${activeOrder.ion.name} bullets. Reward: ${activeOrder.reward} Ionites.`;
+        fulfillOrderButton.disabled = false;
+      }
 
-            function renderOrders() {
-                ordersList.innerHTML = "";
-                orders.forEach((order, index) => {
-                    const orderElement = document.createElement("div");
-                    orderElement.textContent = `${order.quantity - order.remaining}/${order.quantity} ${order.ion.name} Bullets - Reward: ${order.reward} Ionites`;
-                    ordersList.appendChild(orderElement);
-                });
-            }
+      /* ----- Order System ----- */
+      const contractorNames = ["Aldric", "Beren", "Cassi", "Darian", "Elric"];
+      function generateOrder() {
+        if (activeOrder) return;  // Only one active order allowed by default
+        const ion = ions[Math.floor(Math.random() * ions.length)];
+        const quantity = Math.floor(Math.random() * 3) + 1; // 1 to 3 bullets
+        const tip = Math.floor(Math.random() * 10);
+        const reward = ion.sellPrice * quantity + tip;
+        const contractor = contractorNames[Math.floor(Math.random() * contractorNames.length)];
+        activeOrder = {
+          ion,
+          quantity,
+          remaining: quantity,
+          reward,
+          contractor,
+          totalTime: orderTotalTime,
+          timeLeft: orderTotalTime
+        };
+        updateOrderDisplay();
+        startOrderTimer();
+      }
+      function startOrderTimer() {
+        clearInterval(orderTimerInterval);
+        orderTimerInterval = setInterval(() => {
+          if (!activeOrder) return;
+          activeOrder.timeLeft -= 100;
+          let percent = ((activeOrder.totalTime - activeOrder.timeLeft) / activeOrder.totalTime) * 100;
+          if (percent >= 75) {
+            orderFill.style.background = "red";
+          } else {
+            orderFill.style.background = "#0f0";
+          }
+          orderFill.style.width = percent + "%";
+          if (activeOrder.timeLeft <= 0) {
+            clearInterval(orderTimerInterval);
+            messageDiv.textContent = "Order expired! Game Over.";
+            disableGame();
+          }
+        }, 100);
+      }
+      function disableGame() {
+        revealButton.disabled = true;
+        submitFormulaButton.disabled = true;
+        fulfillOrderButton.disabled = true;
+        contractUpgradeButton.disabled = true;
+        forgeUpgradeButton.disabled = true;
+      }
 
-            function synthesizeBullet() {
-                const selectedIon = ions[ionSelect.value];
-                const userInput = formulaInput.value.trim();
-
-                if (userInput !== selectedIon.formula) {
-                    messageDiv.textContent = "Incorrect formula! Try again.";
-                    return;
-                }
-
-                synthesizeButton.disabled = true;
-                messageDiv.textContent = `Synthesizing ${selectedIon.name} bullet...`;
-                formulaInput.value = "";
-
-                let progress = 0;
-                progressFill.style.width = "0%";
-                const synthesisTime = selectedIon.synthesisTime;
-                const interval = 50;
-
-                const timer = setInterval(() => {
-                    progress += interval;
-                    progressFill.style.width = Math.min((progress / synthesisTime) * 100, 100) + "%";
-                    if (progress >= synthesisTime) {
-                        clearInterval(timer);
-                        orders.forEach((order) => {
-                            if (order.ion.name === selectedIon.name && order.remaining > 0) {
-                                order.remaining--;
-                            }
-                        });
-                        orders = orders.filter((order) => order.remaining > 0);
-                        messageDiv.textContent = `${selectedIon.name} bullet synthesized!`;
-                        updateIonitesDisplay();
-                        renderOrders();
-                        synthesizeButton.disabled = false;
-                    }
-                }, interval);
-            }
-
-            setTimeout(addOrder, 5000);
-            setInterval(addOrder, orderInterval);
+      /* ----- Gameplay: Fulfilling Orders ----- */
+      submitFormulaButton.addEventListener("click", () => {
+        if (!activeOrder) {
+          messageDiv.textContent = "No active order.";
+          return;
+        }
+        const inputFormula = formulaInput.value.trim();
+        if (inputFormula === activeOrder.ion.formula) {
+          activeOrder.remaining--;
+          messageDiv.textContent = `${activeOrder.ion.name} bullet fabricated! ${activeOrder.remaining} remaining.`;
+          formulaInput.value = "";
+          if (activeOrder.remaining <= 0) {
+            clearInterval(orderTimerInterval);
+            ionites += activeOrder.reward;
+            messageDiv.textContent = `Order fulfilled! Earned ${activeOrder.reward} Ionites.`;
+            activeOrder = null;
+            orderFill.style.width = "0%";
             updateIonitesDisplay();
-        </script>
-    </body>
+            updateOrderDisplay();
+            // Generate next order after a delay
+            setTimeout(generateOrder, 10000);
+          }
+        } else {
+          messageDiv.textContent = "Incorrect formula!";
+        }
+      });
+      formulaInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          submitFormulaButton.click();
+        }
+      });
+      revealButton.addEventListener("click", () => {
+        if (!activeOrder) {
+          messageDiv.textContent = "No active order to reveal recipe for.";
+          return;
+        }
+        if (ionites < 5) {
+          messageDiv.textContent = "Not enough Ionites to reveal recipe!";
+          return;
+        }
+        ionites -= 5;
+        updateIonitesDisplay();
+        messageDiv.textContent = `${activeOrder.ion.name} Recipe: ${activeOrder.ion.formula}`;
+      });
+
+      /* ----- Shop Upgrades ----- */
+      function upgradeContract() {
+        const cost = contractLevel * 50;
+        if (ionites < cost) {
+          messageDiv.textContent = "Not enough Ionites for Contract Upgrade.";
+          return;
+        }
+        ionites -= cost;
+        contractLevel++;
+        updateIonitesDisplay();
+        updateUpgradesDisplay();
+        messageDiv.textContent = "Contract Upgrade purchased!";
+        // Future: Allow more than one active order at a time
+      }
+      function upgradeForge() {
+        const cost = forgeLevel * 50;
+        if (ionites < cost) {
+          messageDiv.textContent = "Not enough Ionites for Forge Upgrade.";
+          return;
+        }
+        ionites -= cost;
+        forgeLevel++;
+        updateIonitesDisplay();
+        updateUpgradesDisplay();
+        messageDiv.textContent = "Forge Upgrade purchased!";
+        // Future: Allow parallel synthesis, etc.
+      }
+      contractUpgradeButton.addEventListener("click", upgradeContract);
+      forgeUpgradeButton.addEventListener("click", upgradeForge);
+
+      /* ----- Initialization ----- */
+      updateIonitesDisplay();
+      updateUpgradesDisplay();
+      generateOrder();
+    </script>
+  </body>
 </html>
