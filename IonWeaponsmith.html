@@ -28,12 +28,12 @@
       /* Container layout: left (shop), center (game area), right (orders) */
       #container {
         display: flex;
-        height: calc(100vh - 60px); /* leaving room for money counter */
+        height: calc(100vh - 200px); /* leaving room for money counter & inventory */
       }
       #shopPanel, #ordersPanel {
         width: 20%;
-        background: #111;  /* Neutral dark background */
-        border: 2px solid #00E5FF; /* Light cyan border */
+        background: #111;
+        border: 2px solid #00E5FF; /* light cyan border */
         padding: 10px;
         box-sizing: border-box;
         overflow-y: auto;
@@ -90,10 +90,45 @@
         text-align: center;
       }
       .upgradeItem img {
-        width: 50px;
-        height: 50px;
+        width: 16px;  /* 16x16 pixel art style */
+        height: 16px;
         display: block;
         margin: 0 auto 5px auto;
+      }
+      /* Forge Bars in Game Area */
+      #forgeContainer {
+        margin-bottom: 20px;
+      }
+      .forgeBar {
+        width: 100%;
+        height: 20px;
+        border: 2px solid #fff;
+        background: #222;
+        margin: 5px auto;
+        position: relative;
+      }
+      .forgeFill {
+        height: 100%;
+        background: #0f0;
+        width: 0%;
+      }
+      /* Inventory Block */
+      #inventoryBlock {
+        background: #111;
+        border: 2px solid #00E5FF;
+        padding: 10px;
+        margin: 10px auto;
+        width: 90%;
+        box-sizing: border-box;
+        text-align: center;
+      }
+      .inventorySlot {
+        display: inline-block;
+        width: 80px;
+        margin: 5px;
+        padding: 5px;
+        border: 1px solid #fff;
+        box-sizing: border-box;
       }
     </style>
   </head>
@@ -124,12 +159,15 @@
           <div>Cost: <span id="forgeCost">50</span> Ionites</div>
           <button id="forgeUpgradeButton">Upgrade</button>
         </div>
-        <!-- (Additional upgrades can be added here) -->
       </div>
       <!-- Game Area (Center) -->
       <div id="gameArea">
-        <h2>Fulfill Order</h2>
-        <!-- (Instructions can be placed here) -->
+        <h2>Forge Bullets</h2>
+        <!-- Forge Bars Container --> 
+        <div id="forgeContainer">
+          <!-- Forge bars will be dynamically added here -->
+        </div>
+        <!-- Input area for forging (for the active order's ion) -->
         <input type="text" id="formulaInput" placeholder="Enter Formula">
         <button id="submitFormulaButton">Submit</button>
         <button id="revealButton">Reveal Recipe (-5 Ionites)</button>
@@ -142,12 +180,19 @@
         <div id="orderTimerBar">
           <div id="orderFill"></div>
         </div>
-        <button id="fulfillOrderButton" disabled>Manual Fulfill</button>
+        <button id="fulfillOrderButton" disabled>Fulfill Order</button>
+      </div>
+    </div>
+    <!-- Inventory Block (Bottom Center) -->
+    <div id="inventoryBlock">
+      <h2>Inventory</h2>
+      <div id="inventorySlots">
+        <!-- Inventory slots for each ion will be generated here -->
       </div>
     </div>
     <script>
       /* ----- Data Definitions ----- */
-      // Polyatomic ion definitions
+      // Polyatomic ion definitions (20 total)
       const ions = [
         { name: "Ammonium",    formula: "NH4+1",   charge: 1,  synthesisTime: 5000, sellPrice: 12 },
         { name: "Acetate",     formula: "C2H3O2-1", charge: -1, synthesisTime: 5500, sellPrice: 15 },
@@ -173,13 +218,20 @@
 
       /* ----- Game State Variables ----- */
       let ionites = 100;
-      let activeOrder = null; // current active order (only one allowed by default)
+      let activeOrder = null; // Only one active order allowed by default
       const orderTotalTime = 30000; // 30 seconds per order
       let orderTimerInterval = null;
-
+      
       // Upgrades
-      let contractLevel = 1; // determines how many orders can be active (default: 1)
-      let forgeLevel = 1;    // for future: determines parallel synthesis (default: 1)
+      let contractLevel = 1; // For now, remains 1 (only one order active)
+      let forgeLevel = 1;    // Determines number of available forges
+
+      // Inventory: object keyed by ion name, value is count
+      let inventory = {};
+      ions.forEach(ion => inventory[ion.name] = 0);
+
+      // Forge system: an array of forge objects
+      let forges = []; // Each forge: { busy: false, element: DOMElement, timer: reference }
 
       /* ----- DOM Elements ----- */
       const ionitesDisplay = document.getElementById("ionites");
@@ -190,6 +242,8 @@
       const submitFormulaButton = document.getElementById("submitFormulaButton");
       const revealButton = document.getElementById("revealButton");
       const fulfillOrderButton = document.getElementById("fulfillOrderButton");
+      const forgeContainer = document.getElementById("forgeContainer");
+      const inventorySlots = document.getElementById("inventorySlots");
 
       // Shop Upgrade Elements
       const contractUpgradeButton = document.getElementById("contractUpgradeButton");
@@ -223,11 +277,39 @@
         ordersDisplay.innerHTML = `Contractor ${activeOrder.contractor} requests ${activeOrder.quantity}x ${activeOrder.ion.name} bullets. Reward: ${activeOrder.reward} Ionites.`;
         fulfillOrderButton.disabled = false;
       }
-
+      function updateInventoryDisplay() {
+        inventorySlots.innerHTML = "";
+        ions.forEach(ion => {
+          const slot = document.createElement("div");
+          slot.className = "inventorySlot";
+          slot.innerHTML = `<strong>${ion.name}</strong><br/>${inventory[ion.name]}`;
+          inventorySlots.appendChild(slot);
+        });
+      }
+      
+      /* ----- Forge System ----- */
+      function initForges() {
+        // Clear forge container and forges array
+        forgeContainer.innerHTML = "";
+        forges = [];
+        for (let i = 0; i < forgeLevel; i++) {
+          const forgeDiv = document.createElement("div");
+          forgeDiv.className = "forgeBar";
+          const forgeFill = document.createElement("div");
+          forgeFill.className = "forgeFill";
+          forgeDiv.appendChild(forgeFill);
+          forgeContainer.appendChild(forgeDiv);
+          forges.push({ busy: false, element: forgeFill, timer: null });
+        }
+      }
+      function getFreeForge() {
+        return forges.find(forge => !forge.busy);
+      }
+      
       /* ----- Order System ----- */
       const contractorNames = ["Aldric", "Beren", "Cassi", "Darian", "Elric"];
       function generateOrder() {
-        if (activeOrder) return;  // Only one active order allowed by default
+        if (activeOrder) return;  // Only one active order at a time
         const ion = ions[Math.floor(Math.random() * ions.length)];
         const quantity = Math.floor(Math.random() * 3) + 1; // 1 to 3 bullets
         const tip = Math.floor(Math.random() * 10);
@@ -251,12 +333,12 @@
           if (!activeOrder) return;
           activeOrder.timeLeft -= 100;
           let percent = ((activeOrder.totalTime - activeOrder.timeLeft) / activeOrder.totalTime) * 100;
+          orderFill.style.width = percent + "%";
           if (percent >= 75) {
             orderFill.style.background = "red";
           } else {
             orderFill.style.background = "#0f0";
           }
-          orderFill.style.width = percent + "%";
           if (activeOrder.timeLeft <= 0) {
             clearInterval(orderTimerInterval);
             messageDiv.textContent = "Order expired! Game Over.";
@@ -271,32 +353,42 @@
         contractUpgradeButton.disabled = true;
         forgeUpgradeButton.disabled = true;
       }
-
-      /* ----- Gameplay: Fulfilling Orders ----- */
+      
+      /* ----- Gameplay: Forging Bullets ----- */
       submitFormulaButton.addEventListener("click", () => {
         if (!activeOrder) {
           messageDiv.textContent = "No active order.";
           return;
         }
         const inputFormula = formulaInput.value.trim();
-        if (inputFormula === activeOrder.ion.formula) {
-          activeOrder.remaining--;
-          messageDiv.textContent = `${activeOrder.ion.name} bullet fabricated! ${activeOrder.remaining} remaining.`;
-          formulaInput.value = "";
-          if (activeOrder.remaining <= 0) {
-            clearInterval(orderTimerInterval);
-            ionites += activeOrder.reward;
-            messageDiv.textContent = `Order fulfilled! Earned ${activeOrder.reward} Ionites.`;
-            activeOrder = null;
-            orderFill.style.width = "0%";
-            updateIonitesDisplay();
-            updateOrderDisplay();
-            // Generate next order after a delay
-            setTimeout(generateOrder, 10000);
-          }
-        } else {
+        if (inputFormula !== activeOrder.ion.formula) {
           messageDiv.textContent = "Incorrect formula!";
+          return;
         }
+        const freeForge = getFreeForge();
+        if (!freeForge) {
+          messageDiv.textContent = "All forges busy!";
+          return;
+        }
+        // Start forging in the free forge
+        freeForge.busy = true;
+        messageDiv.textContent = `Forging ${activeOrder.ion.name} bullet...`;
+        formulaInput.value = "";
+        let progress = 0;
+        const synthesisTime = activeOrder.ion.synthesisTime;
+        freeForge.element.style.width = "0%";
+        freeForge.timer = setInterval(() => {
+          progress += 50;
+          freeForge.element.style.width = Math.min((progress / synthesisTime) * 100, 100) + "%";
+          if (progress >= synthesisTime) {
+            clearInterval(freeForge.timer);
+            freeForge.busy = false;
+            messageDiv.textContent = `${activeOrder.ion.name} bullet forged!`;
+            // Add bullet to inventory for this ion
+            inventory[activeOrder.ion.name]++;
+            updateInventoryDisplay();
+          }
+        }, 50);
       });
       formulaInput.addEventListener("keypress", (e) => {
         if (e.key === "Enter") {
@@ -316,7 +408,31 @@
         updateIonitesDisplay();
         messageDiv.textContent = `${activeOrder.ion.name} Recipe: ${activeOrder.ion.formula}`;
       });
-
+      
+      /* ----- Fulfilling Orders ----- */
+      fulfillOrderButton.addEventListener("click", () => {
+        if (!activeOrder) {
+          messageDiv.textContent = "No active order.";
+          return;
+        }
+        // Check if inventory has enough bullets for the active order's ion
+        if (inventory[activeOrder.ion.name] < activeOrder.quantity) {
+          messageDiv.textContent = "Not enough bullets in inventory to fulfill order.";
+          return;
+        }
+        // Deduct bullets from inventory
+        inventory[activeOrder.ion.name] -= activeOrder.quantity;
+        ionites += activeOrder.reward;
+        messageDiv.textContent = `Order fulfilled! Earned ${activeOrder.reward} Ionites.`;
+        activeOrder = null;
+        orderFill.style.width = "0%";
+        updateIonitesDisplay();
+        updateOrderDisplay();
+        updateInventoryDisplay();
+        // Generate next order after a delay
+        setTimeout(generateOrder, 10000);
+      });
+      
       /* ----- Shop Upgrades ----- */
       function upgradeContract() {
         const cost = contractLevel * 50;
@@ -329,7 +445,7 @@
         updateIonitesDisplay();
         updateUpgradesDisplay();
         messageDiv.textContent = "Contract Upgrade purchased!";
-        // Future: Allow more than one active order at a time
+        // Future: Allow more than one active order simultaneously
       }
       function upgradeForge() {
         const cost = forgeLevel * 50;
@@ -342,14 +458,29 @@
         updateIonitesDisplay();
         updateUpgradesDisplay();
         messageDiv.textContent = "Forge Upgrade purchased!";
-        // Future: Allow parallel synthesis, etc.
+        // Add a new forge bar
+        const forgeDiv = document.createElement("div");
+        forgeDiv.className = "forgeBar";
+        const forgeFill = document.createElement("div");
+        forgeFill.className = "forgeFill";
+        forgeDiv.appendChild(forgeFill);
+        forgeContainer.appendChild(forgeDiv);
+        forges.push({ busy: false, element: forgeFill, timer: null });
+        updateInventoryDisplay();
       }
       contractUpgradeButton.addEventListener("click", upgradeContract);
       forgeUpgradeButton.addEventListener("click", upgradeForge);
-
+      
+      /* ----- Inventory Display ----- */
+      function initInventoryDisplay() {
+        updateInventoryDisplay();
+      }
+      
       /* ----- Initialization ----- */
       updateIonitesDisplay();
       updateUpgradesDisplay();
+      initForges();
+      initInventoryDisplay();
       generateOrder();
     </script>
   </body>
