@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Ion Tycoon: Ruler of the Universe</title>
+        <style>
+            body {
+                margin: 0;
+                background: #111;
+                color: #fff;
+                font-family: Arial, sans-serif;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding: 20px;
+            }
+            header {
+                font-size: 2em;
+                margin-bottom: 20px;
+            }
+            #stats {
+                margin-bottom: 20px;
+            }
+            #game-content {
+                display: flex;
+                width: 90%;
+                max-width: 1000px;
+            }
+            #production-area,
+            #shop-area {
+                flex: 1;
+                background: #222;
+                padding: 20px;
+                margin: 5px;
+                border-radius: 10px;
+                box-sizing: border-box;
+            }
+            #production-area h2,
+            #shop-area h2 {
+                margin-top: 0;
+            }
+            #produce-btn {
+                padding: 10px 20px;
+                font-size: 16px;
+                background: #ffcc00;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                margin-bottom: 20px;
+            }
+            #produce-btn:hover {
+                background: #ffaa00;
+            }
+            #question-area {
+                margin-top: 20px;
+            }
+            #question-text {
+                margin-bottom: 10px;
+                font-size: 18px;
+            }
+            #question-input {
+                width: 80%;
+                padding: 10px;
+                font-size: 16px;
+                border: 2px solid #ffcc00;
+                border-radius: 5px;
+                background: #111;
+                color: #fff;
+            }
+            #answer-btn {
+                padding: 10px 20px;
+                font-size: 16px;
+                background: #ffcc00;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                margin-top: 10px;
+            }
+            #answer-btn:hover {
+                background: #ffaa00;
+            }
+            #question-feedback {
+                margin-top: 10px;
+                font-weight: bold;
+                min-height: 24px;
+            }
+            .correct {
+                color: lightgreen;
+            }
+            .wrong {
+                color: #ff6666;
+            }
+            /* Shop Styles */
+            #upgrades-list {
+                margin-top: 10px;
+            }
+            .upgrade-item {
+                background: #333;
+                border: 2px solid #ffcc00;
+                border-radius: 5px;
+                padding: 10px;
+                margin-bottom: 10px;
+                cursor: pointer;
+                text-align: left;
+            }
+            .upgrade-item:hover {
+                background: #444;
+            }
+            .upgrade-item span {
+                display: block;
+            }
+        </style>
+    </head>
+    <body>
+        <header>Ion Tycoon: Ruler of the Universe</header>
+        <div id="stats">
+            <p>Ions: <span id="ions-count">0</span></p>
+            <p>Production Rate: <span id="production-rate">1</span> ions/sec</p>
+        </div>
+        <div id="game-content">
+            <!-- Production & Quiz Area -->
+            <div id="production-area">
+                <h2>Production & Quiz</h2>
+                <button id="produce-btn" onclick="manualProduce()">Produce Ion</button>
+                <div id="question-area">
+                    <p id="question-text">Loading question...</p>
+                    <input
+                        type="text"
+                        id="question-input"
+                        placeholder="Answer question"
+                        onkeydown="if(event.key==='Enter') answerQuestion()" />
+                    <br />
+                    <button id="answer-btn" onclick="answerQuestion()">Submit Answer</button>
+                    <p id="question-feedback"></p>
+                </div>
+            </div>
+            <!-- Upgrade Shop Area -->
+            <div id="shop-area">
+                <h2>Upgrade Shop</h2>
+                <div id="upgrades-list">
+                    <!-- Upgrades will be listed here -->
+                </div>
+            </div>
+        </div>
+        <script>
+            /* ---------------------
+       Game Variables
+    --------------------- */
+            let ionsCount = 0;
+            let baseProduction = 1; // Manual click production
+            let addProduction = 0; // From additive upgrades
+            let multProduction = 1; // From multiplicative upgrades
+            // Production rate is computed as (baseProduction + addProduction) * multProduction
+            let productionRate = baseProduction;
+            // Speed bonus multiplier: normally 1, but becomes 2.5 for 2.5 seconds when question answered correctly
+            let speedBonus = 1;
+            let speedBonusTimeout = null;
+
+            /* ---------------------
+       Auto-production Timer
+       Uses a fixed 1 sec interval, but multiplies production by speedBonus.
+    --------------------- */
+            setInterval(() => {
+                updateProductionRate();
+                // Add ionsCount based on production rate (ions per second) and speed bonus
+                ionsCount += productionRate * speedBonus;
+                updateStats();
+            }, 1000);
+
+            /* ---------------------
+       Polyatomic Ion Questions
+       (Easily swappable for other topics)
+    --------------------- */
+            const ionQuestions = {
+                Ammonium: "NH4+1",
+                Acetate: "C2H3O2-1",
+                Bicarbonate: "HCO3-1",
+                Bromate: "BrO3-1",
+                Cyanide: "CN-1",
+                Hydroxide: "OH-1",
+                Nitrate: "NO3-1",
+                Nitrite: "NO2-1",
+                Thiocyanate: "SCN-1",
+                Carbonate: "CO3-2",
+                Chromate: "CrO4-2",
+                Peroxide: "O2-2",
+                Sulfate: "SO4-2",
+                Sulfite: "SO3-2",
+                Tartrate: "C4H4O6-2",
+                Borate: "BO3-3",
+                Citrate: "C6H5O7-3",
+                Phosphate: "PO4-3",
+                Phosphite: "PO3-3",
+                Silicate: "SiO4-4"
+            };
+
+            let currentQuestion = "";
+            let currentAnswer = "";
+
+            function newQuestion() {
+                const keys = Object.keys(ionQuestions);
+                const randomKey = keys[Math.floor(Math.random() * keys.length)];
+                currentQuestion = randomKey;
+                currentAnswer = ionQuestions[randomKey];
+                document.getElementById("question-text").textContent =
+                    "What is the formula for " + currentQuestion + "?";
+                document.getElementById("question-input").value = "";
+                document.getElementById("question-feedback").textContent = "";
+            }
+
+            /* ---------------------
+       Production Functions
+    --------------------- */
+            function manualProduce() {
+                ionsCount += baseProduction;
+                updateStats();
+            }
+
+            function answerQuestion() {
+                const userAnswer = document.getElementById("question-input").value.trim();
+                const feedbackElem = document.getElementById("question-feedback");
+                if (userAnswer === "") return;
+                if (userAnswer === currentAnswer) {
+                    // Correct answer: bonus ions, production boost, and temporary speed boost
+                    let bonus = 10; // flat bonus ions
+                    ionsCount += bonus;
+                    addProduction += 0.5;
+                    feedbackElem.textContent = "Correct! +" + bonus + " ions, +0.5 production, and SPEED BOOST!";
+                    feedbackElem.className = "correct";
+                    // Activate speed bonus: set speedBonus to 2.5 for 2.5 seconds
+                    speedBonus = 2.5;
+                    if (speedBonusTimeout) clearTimeout(speedBonusTimeout);
+                    speedBonusTimeout = setTimeout(() => {
+                        speedBonus = 1;
+                    }, 2500);
+                } else {
+                    feedbackElem.textContent = "Wrong! The correct answer was: " + currentAnswer;
+                    feedbackElem.className = "wrong";
+                }
+                updateStats();
+                newQuestion();
+            }
+
+            function updateProductionRate() {
+                productionRate = (baseProduction + addProduction) * multProduction;
+                document.getElementById("production-rate").textContent = productionRate.toFixed(1);
+            }
+
+            /* ---------------------
+       Stats Update
+    --------------------- */
+            function updateStats() {
+                document.getElementById("ions-count").textContent = Math.floor(ionsCount);
+            }
+
+            /* ---------------------
+       Upgrade Shop
+    --------------------- */
+            // Define upgrade options
+            const upgrades = [
+                { name: "Ion Extractor", type: "add", value: 1, cost: 50, desc: "Adds +1 ion/sec" },
+                {
+                    name: "Catalytic Converter",
+                    type: "mult",
+                    value: 1.2,
+                    cost: 200,
+                    desc: "Multiplies production by 1.2x"
+                },
+                { name: "Fusion Reactor", type: "add", value: 5, cost: 1000, desc: "Adds +5 ion/sec" },
+                {
+                    name: "Quantum Accelerator",
+                    type: "mult",
+                    value: 1.5,
+                    cost: 5000,
+                    desc: "Multiplies production by 1.5x"
+                },
+                {
+                    name: "Universal Ionizer",
+                    type: "mult",
+                    value: 2.0,
+                    cost: 20000,
+                    desc: "Multiplies production by 2x"
+                }
+            ];
+
+            function renderUpgrades() {
+                const shop = document.getElementById("upgrades-list");
+                shop.innerHTML = "";
+                upgrades.forEach((upgrade, index) => {
+                    const div = document.createElement("div");
+                    div.className = "upgrade-item";
+                    div.innerHTML = `<span><strong>${upgrade.name}</strong></span>
+                         <span>${upgrade.desc}</span>
+                         <span>Cost: ${upgrade.cost} ions</span>`;
+                    div.onclick = () => purchaseUpgrade(index);
+                    shop.appendChild(div);
+                });
+            }
+
+            function purchaseUpgrade(index) {
+                const upgrade = upgrades[index];
+                if (ionsCount >= upgrade.cost) {
+                    ionsCount -= upgrade.cost;
+                    if (upgrade.type === "add") {
+                        addProduction += upgrade.value;
+                    } else if (upgrade.type === "mult") {
+                        multProduction *= upgrade.value;
+                    }
+                    // Increase cost for subsequent purchases (optional)
+                    upgrade.cost = Math.floor(upgrade.cost * 1.5);
+                    updateStats();
+                    updateProductionRate();
+                    renderUpgrades();
+                } else {
+                    alert("Not enough ions to purchase this upgrade!");
+                }
+            }
+
+            /* ---------------------
+       Initialization
+    --------------------- */
+            function initGame() {
+                updateStats();
+                newQuestion();
+                renderUpgrades();
+                updateProductionRate();
+            }
+
+            window.onload = initGame;
+        </script>
+    </body>
+</html>

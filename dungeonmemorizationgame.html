@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Infinite Dungeon Quiz</title>
+        <style>
+            /* Global Styles & Layout */
+            body {
+                font-family: Arial, sans-serif;
+                background: #222;
+                color: white;
+                margin: 0;
+                padding: 0;
+            }
+            #main-container {
+                display: flex;
+                height: 100vh;
+            }
+            /* Left Panel: Question Area */
+            #left-panel {
+                flex: 0 0 30%;
+                background: #333;
+                padding: 20px;
+                box-sizing: border-box;
+            }
+            #left-panel h2 {
+                margin-top: 0;
+            }
+            #question-text {
+                margin: 20px 0;
+                font-size: 18px;
+            }
+            #answer {
+                width: 80%;
+                padding: 10px;
+                font-size: 16px;
+                border: 2px solid #ffcc00;
+                border-radius: 5px;
+                background: #222;
+                color: white;
+            }
+            #submit-btn,
+            #skip-btn,
+            #bomb-btn {
+                padding: 10px 20px;
+                margin-top: 10px;
+                background-color: #ffcc00;
+                color: #222;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+            }
+            #submit-btn:hover,
+            #skip-btn:hover,
+            #bomb-btn:hover {
+                background-color: #ffaa00;
+            }
+            #feedback {
+                margin-top: 10px;
+                font-weight: bold;
+                min-height: 24px;
+            }
+            .correct {
+                color: lightgreen;
+            }
+            .wrong {
+                color: #ff6666;
+            }
+            /* Center Panel: Monsters & Art */
+            #center-panel {
+                flex: 1;
+                background: #444;
+                padding: 20px;
+                box-sizing: border-box;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+            #center-panel h2 {
+                margin-top: 0;
+            }
+            #monster-container {
+                display: flex;
+                gap: 20px;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            .monster {
+                width: 64px;
+                height: 64px;
+                background: #555;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 10px;
+                border: 2px solid transparent;
+                cursor: pointer;
+                white-space: pre-line;
+            }
+            .monster.selected {
+                border-color: #ffcc00;
+            }
+            /* Right Panel: Stats */
+            #right-panel {
+                flex: 0 0 25%;
+                background: #333;
+                padding: 20px;
+                box-sizing: border-box;
+            }
+            #stats {
+                font-size: 16px;
+                line-height: 1.6;
+            }
+            /* Additional Stats & Progress Bar */
+            #room-progress-bar {
+                background: #555;
+                width: 100%;
+                height: 20px;
+                border-radius: 10px;
+                overflow: hidden;
+                margin-top: 10px;
+            }
+            #progress {
+                background: #ffcc00;
+                width: 100%;
+                height: 100%;
+            }
+            button#use-potion-btn {
+                margin-top: 10px;
+                padding: 8px 16px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="main-container">
+            <!-- Left Panel: Question Area -->
+            <div id="left-panel">
+                <h2>Question</h2>
+                <p id="question-text">Loading question...</p>
+                <input
+                    type="text"
+                    id="answer"
+                    placeholder="Enter answer"
+                    onkeydown="if(event.key==='Enter') checkAnswer()" />
+                <br />
+                <button id="submit-btn" onclick="checkAnswer()">Submit Answer</button>
+                <br />
+                <button id="skip-btn" onclick="skipQuestion()">Skip (20 Gold)</button>
+                <br />
+                <button id="bomb-btn" onclick="useBomb()">Use Bomb</button>
+                <p id="feedback"></p>
+            </div>
+
+            <!-- Center Panel: Monster Area (Art in progress) -->
+            <div id="center-panel">
+                <h2>Monsters</h2>
+                <div id="monster-container">
+                    <!-- Monsters will be rendered here -->
+                </div>
+            </div>
+
+            <!-- Right Panel: Stats -->
+            <div id="right-panel">
+                <h2>Stats</h2>
+                <div id="stats">
+                    <p>Player HP: <span id="player-hp">100</span> / <span id="max-hp">100</span></p>
+                    <p>Rooms Cleared: <span id="rooms-cleared">0</span></p>
+                    <p>Monsters Killed: <span id="monsters-killed">0</span></p>
+                    <p>Questions Correct: <span id="questions-correct">0</span></p>
+                    <p>Gold: <span id="player-gold">0</span></p>
+                    <p>Level: <span id="player-level">1</span> | XP: <span id="player-xp">0</span></p>
+                    <p>Combo Streak: <span id="combo-streak">0</span></p>
+                    <p>Room Timer: <span id="room-timer">30</span> s</p>
+                    <p>Inventory: Potions: <span id="potions-count">0</span>, Bombs: <span id="bombs-count">0</span></p>
+                    <p>High Streak: <span id="high-streak">0</span></p>
+                    <div id="room-progress-bar">
+                        <div id="progress"></div>
+                    </div>
+                    <button id="use-potion-btn" onclick="usePotion()">Use Potion</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            /* ----------------------------
+         Game State & Variables
+      ----------------------------- */
+            let playerHP = 100,
+                maxPlayerHP = 100,
+                playerGold = 0;
+            let roomsCleared = 0,
+                monstersKilled = 0,
+                questionsCorrect = 0;
+            let playerXP = 0,
+                playerLevel = 1;
+            let correctStreak = 0,
+                highStreak = 0;
+            let roomTimer = 30,
+                roomTimerInterval = null;
+            let inventory = { potions: 0, bombs: 0 };
+            let initialMonsterCount = 0;
+            let roomPowerUpActive = false; // bonus +5 damage if active
+            let questionStartTime = 0;
+            let selectedMonsterIndex = null;
+            let currentRoom = []; // Array of monster objects
+            let currentQuestion = "",
+                currentAnswer = "";
+
+            /* ----------------------------
+         Question Data (Memorization Content)
+         (Polyatomic Ions by default)
+      ----------------------------- */
+            const questions = {
+                Ammonium: "NH4+1",
+                Acetate: "C2H3O2-1",
+                Bicarbonate: "HCO3-1",
+                Bromate: "BrO3-1",
+                Cyanide: "CN-1",
+                Hydroxide: "OH-1",
+                Nitrate: "NO3-1",
+                Nitrite: "NO2-1",
+                Thiocyanate: "SCN-1",
+                Carbonate: "CO3-2",
+                Chromate: "CrO4-2",
+                Peroxide: "O2-2",
+                Sulfate: "SO4-2",
+                Sulfite: "SO3-2",
+                Tartrate: "C4H4O6-2",
+                Borate: "BO3-3",
+                Citrate: "C6H5O7-3",
+                Phosphate: "PO4-3",
+                Phosphite: "PO3-3",
+                Silicate: "SiO4-4"
+            };
+
+            /* ----------------------------
+         Monster Data & Room Generation
+      ----------------------------- */
+            const monsterTypes = [
+                { name: "Slime", hp: 40, attack: 10 },
+                { name: "Goblin", hp: 60, attack: 15 },
+                { name: "Skeleton", hp: 80, attack: 20 },
+                { name: "Troll", hp: 100, attack: 25 }
+            ];
+
+            function generateRoom() {
+                clearInterval(roomTimerInterval);
+                roomTimer = 30;
+                startRoomTimer();
+                // Reset power-up flag and randomly activate power-up for room
+                roomPowerUpActive = Math.random() < 0.2;
+                if (roomPowerUpActive) {
+                    displayFeedback("Power-up active: +5 bonus damage this room!", "correct");
+                }
+                // Random event: gold rain or trap (30% chance)
+                if (Math.random() < 0.3) {
+                    if (Math.random() < 0.5) {
+                        playerGold += 20;
+                        displayFeedback("Gold rain! +20 Gold", "correct");
+                    } else {
+                        playerHP -= 10;
+                        displayFeedback("Trap! -10 HP", "wrong");
+                    }
+                }
+                // Boss Room every 5 rooms
+                let isBossRoom = roomsCleared > 0 && roomsCleared % 5 === 0;
+                currentRoom = [];
+                let monsterCount = isBossRoom ? 1 : Math.floor(Math.random() * 3) + 1;
+                for (let i = 0; i < monsterCount; i++) {
+                    let base = monsterTypes[Math.floor(Math.random() * monsterTypes.length)];
+                    // Difficulty scaling factor based on rooms cleared
+                    let factor = 1 + roomsCleared * 0.1;
+                    let monster = {
+                        name: isBossRoom ? "BOSS " + base.name : base.name,
+                        hp: Math.floor(base.hp * factor * (isBossRoom ? 2 : 1)),
+                        maxHp: Math.floor(base.hp * factor * (isBossRoom ? 2 : 1)),
+                        attack: Math.floor(base.attack * factor * (isBossRoom ? 1.5 : 1)),
+                        stunned: false
+                    };
+                    currentRoom.push(monster);
+                }
+                initialMonsterCount = currentRoom.length;
+                selectedMonsterIndex = null;
+                renderMonsters();
+                updateStats();
+            }
+
+            function renderMonsters() {
+                const container = document.getElementById("monster-container");
+                container.innerHTML = "";
+                currentRoom.forEach((monster, index) => {
+                    const div = document.createElement("div");
+                    div.className = "monster";
+                    if (selectedMonsterIndex === index) div.classList.add("selected");
+                    div.textContent = monster.name + "\n" + monster.hp + "/" + monster.maxHp;
+                    div.onclick = () => {
+                        selectedMonsterIndex = index;
+                        renderMonsters();
+                    };
+                    container.appendChild(div);
+                });
+            }
+
+            /* ----------------------------
+         Question Functions
+      ----------------------------- */
+            function newQuestion() {
+                questionStartTime = Date.now();
+                const keys = Object.keys(questions);
+                const randomKey = keys[Math.floor(Math.random() * keys.length)];
+                currentQuestion = randomKey;
+                currentAnswer = questions[randomKey];
+                document.getElementById("question-text").textContent =
+                    "What is the formula for " + currentQuestion + "?";
+                document.getElementById("answer").value = "";
+                document.getElementById("feedback").textContent = "";
+            }
+
+            /* ----------------------------
+         Room Timer Functions
+      ----------------------------- */
+            function startRoomTimer() {
+                roomTimerInterval = setInterval(() => {
+                    roomTimer--;
+                    document.getElementById("room-timer").textContent = roomTimer;
+                    if (roomTimer <= 0) {
+                        clearInterval(roomTimerInterval);
+                        // Penalty for running out of time
+                        playerHP -= 10;
+                        displayFeedback("Time's up! -10 HP", "wrong");
+                        updateStats();
+                        if (playerHP <= 0) {
+                            gameOver();
+                        } else {
+                            newQuestion();
+                        }
+                    }
+                }, 1000);
+            }
+
+            /* ----------------------------
+         Combat & Answer Processing
+      ----------------------------- */
+            function checkAnswer() {
+                if (selectedMonsterIndex === null) {
+                    displayFeedback("Select a monster to attack!", "wrong");
+                    return;
+                }
+                let userAnswer = document.getElementById("answer").value.trim();
+                if (!userAnswer) return;
+                let feedbackElem = document.getElementById("feedback");
+                // Calculate time bonus if answered in under 5 seconds
+                let answerTime = (Date.now() - questionStartTime) / 1000;
+                let timerBonus = answerTime < 5 ? 10 : 0;
+                // Base damage: fixed value plus potential power-up bonus
+                let baseDamage = 20 + timerBonus + (roomPowerUpActive ? 5 : 0);
+                // Apply combo multiplier (1 + 0.1 per correct streak)
+                let comboMultiplier = 1 + correctStreak * 0.1;
+                // Increase XP on each correct answer
+                if (userAnswer === currentAnswer) {
+                    correctStreak++;
+                    if (correctStreak > highStreak) highStreak = correctStreak;
+                    // 10% chance for a critical hit (double damage)
+                    let crit = Math.random() < 0.1;
+                    let totalDamage = baseDamage * comboMultiplier;
+                    if (crit) {
+                        totalDamage *= 2;
+                        feedbackElem.textContent = "Critical Hit! ";
+                    }
+                    // 20% chance to stun the monster (prevent counterattack)
+                    if (Math.random() < 0.2) {
+                        currentRoom[selectedMonsterIndex].stunned = true;
+                        feedbackElem.textContent += "Monster is stunned! ";
+                    }
+                    totalDamage = Math.floor(totalDamage);
+                    currentRoom[selectedMonsterIndex].hp -= totalDamage;
+                    feedbackElem.textContent += "Correct! You dealt " + totalDamage + " damage.";
+                    feedbackElem.className = "correct";
+                    questionsCorrect++;
+                    playerXP += 5;
+                    // Level up if XP threshold met
+                    if (playerXP >= playerLevel * 20) {
+                        playerLevel++;
+                        maxPlayerHP += 10;
+                        playerHP += 10;
+                        displayFeedback("Level Up! Now level " + playerLevel, "correct");
+                    }
+                    // If monster dies
+                    if (currentRoom[selectedMonsterIndex].hp <= 0) {
+                        feedbackElem.textContent += " " + currentRoom[selectedMonsterIndex].name + " is defeated!";
+                        monstersKilled++;
+                        // Loot drops: 30% chance for a potion, 10% for a bomb
+                        if (Math.random() < 0.3) {
+                            inventory.potions++;
+                        }
+                        if (Math.random() < 0.1) {
+                            inventory.bombs++;
+                        }
+                        currentRoom.splice(selectedMonsterIndex, 1);
+                        selectedMonsterIndex = null;
+                        renderMonsters();
+                    }
+                } else {
+                    // Wrong answer: if monster is not stunned, it counterattacks
+                    if (!currentRoom[selectedMonsterIndex].stunned) {
+                        playerHP -= currentRoom[selectedMonsterIndex].attack;
+                        displayFeedback(
+                            "Wrong! " +
+                                currentRoom[selectedMonsterIndex].name +
+                                " counterattacks for " +
+                                currentRoom[selectedMonsterIndex].attack +
+                                " damage.",
+                            "wrong"
+                        );
+                    } else {
+                        displayFeedback("Wrong! But the monster is stunned.", "wrong");
+                    }
+                    correctStreak = 0;
+                }
+                updateStats();
+                if (playerHP <= 0) {
+                    gameOver();
+                    return;
+                }
+                // If room cleared, generate new room
+                if (currentRoom.length === 0) {
+                    roomsCleared++;
+                    updateStats();
+                    setTimeout(generateRoom, 1000);
+                }
+                newQuestion();
+            }
+
+            /* ----------------------------
+         Skip & Bomb Mechanics
+      ----------------------------- */
+            function skipQuestion() {
+                if (playerGold >= 20) {
+                    playerGold -= 20;
+                    displayFeedback("Question skipped!", "correct");
+                    newQuestion();
+                    updateStats();
+                } else {
+                    displayFeedback("Not enough gold to skip!", "wrong");
+                }
+            }
+
+            function useBomb() {
+                if (inventory.bombs > 0) {
+                    inventory.bombs--;
+                    // Bomb deals 30 damage to all monsters
+                    currentRoom.forEach((monster) => {
+                        monster.hp -= 30;
+                    });
+                    displayFeedback("Bomb used! All monsters take 30 damage.", "correct");
+                    // Remove defeated monsters
+                    currentRoom = currentRoom.filter((monster) => {
+                        if (monster.hp <= 0) {
+                            monstersKilled++;
+                            return false;
+                        }
+                        return true;
+                    });
+                    renderMonsters();
+                    updateStats();
+                    if (currentRoom.length === 0) {
+                        roomsCleared++;
+                        setTimeout(generateRoom, 1000);
+                    }
+                } else {
+                    displayFeedback("No bombs in inventory!", "wrong");
+                }
+            }
+
+            function usePotion() {
+                if (inventory.potions > 0) {
+                    inventory.potions--;
+                    playerHP = Math.min(playerHP + 30, maxPlayerHP);
+                    displayFeedback("Potion used! +30 HP", "correct");
+                    updateStats();
+                } else {
+                    displayFeedback("No potions available!", "wrong");
+                }
+            }
+
+            /* ----------------------------
+         Utility & UI Update Functions
+      ----------------------------- */
+            function updateStats() {
+                document.getElementById("player-hp").textContent = playerHP;
+                document.getElementById("max-hp").textContent = maxPlayerHP;
+                document.getElementById("rooms-cleared").textContent = roomsCleared;
+                document.getElementById("monsters-killed").textContent = monstersKilled;
+                document.getElementById("questions-correct").textContent = questionsCorrect;
+                document.getElementById("player-gold").textContent = playerGold;
+                document.getElementById("player-level").textContent = playerLevel;
+                document.getElementById("player-xp").textContent = playerXP;
+                document.getElementById("combo-streak").textContent = correctStreak;
+                document.getElementById("room-timer").textContent = roomTimer;
+                document.getElementById("potions-count").textContent = inventory.potions;
+                document.getElementById("bombs-count").textContent = inventory.bombs;
+                document.getElementById("high-streak").textContent = highStreak;
+                // Update progress bar
+                if (initialMonsterCount > 0) {
+                    let percent = (currentRoom.length / initialMonsterCount) * 100;
+                    document.getElementById("progress").style.width = percent + "%";
+                }
+            }
+
+            function displayFeedback(message, type) {
+                const feedbackElem = document.getElementById("feedback");
+                feedbackElem.textContent = message;
+                feedbackElem.className = type;
+                // (Play sound effect here if desired)
+            }
+
+            function gameOver() {
+                alert("Game Over! You have been defeated.");
+                location.reload();
+            }
+
+            /* ----------------------------
+         Initialization
+      ----------------------------- */
+            function newQuestionWrapper() {
+                newQuestion();
+            }
+            function initGame() {
+                updateStats();
+                generateRoom();
+                newQuestion();
+            }
+            window.onload = initGame;
+        </script>
+    </body>
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polyatomic Ion Quiz</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: linear-gradient(to right, #ff9a9e, #fad0c4);
+            padding: 20px;
+        }
+        #game-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+            display: inline-block;
+            animation: fadeIn 1s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        input {
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #ff758c;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px;
+            font-size: 16px;
+            background-color: #ff758c;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        button:hover {
+            background-color: #ff5277;
+        }
+        #result {
+            margin-top: 10px;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .correct {
+            color: green;
+            animation: bounce 0.5s;
+        }
+        .wrong {
+            color: red;
+            animation: shake 0.5s;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>Polyatomic Ion Quiz 🎉</h1>
+        <p id="ion-name">Loading...</p>
+        <input type="text" id="answer" placeholder="Enter formula with charge" onkeydown="handleKeyPress(event)">
+        <button onclick="checkAnswer()">Submit</button>
+        <p id="result"></p>
+    </div>
+
+    <script>
+        const ions = {
+            "Ammonium": "NH4+1",
+            "Acetate": "C2H3O2-1",
+            "Bicarbonate": "HCO3-1",
+            "Bromate": "BrO3-1",
+            "Cyanide": "CN-1",
+            "Hydroxide": "OH-1",
+            "Nitrate": "NO3-1",
+            "Nitrite": "NO2-1",
+            "Thiocyanate": "SCN-1",
+            "Carbonate": "CO3-2",
+            "Chromate": "CrO4-2",
+            "Peroxide": "O2-2",
+            "Sulfate": "SO4-2",
+            "Sulfite": "SO3-2",
+            "Tartrate": "C4H4O6-2",
+            "Borate": "BO3-3",
+            "Citrate": "C6H5O7-3",
+            "Phosphate": "PO4-3",
+            "Phosphite": "PO3-3",
+            "Silicate": "SiO4-4"
+        };
+
+        let currentIon = "";
+
+        function newQuestion() {
+            const keys = Object.keys(ions);
+            currentIon = keys[Math.floor(Math.random() * keys.length)];
+            document.getElementById("ion-name").textContent = `What is the formula for ${currentIon}?`;
+            document.getElementById("answer").value = "";
+            document.getElementById("result").textContent = "";
+        }
+
+        function checkAnswer() {
+            const userAnswer = document.getElementById("answer").value.trim();
+            const result = document.getElementById("result");
+            if (userAnswer === ions[currentIon]) {
+                result.textContent = "Correct! 🎉";
+                result.className = "correct";
+            } else {
+                result.textContent = `Wrong! The correct answer is ${ions[currentIon]}.`;
+                result.className = "wrong";
+            }
+            setTimeout(newQuestion, 2000);
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === "Enter") {
+                checkAnswer();
+            }
+        }
+
+        window.onload = newQuestion;
+    </script>
+</body>
+</html>

@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Ion Dungeon Crawler: Study & Conquer</title>
+        <style>
+            /* Global Styles */
+            body {
+                font-family: Arial, sans-serif;
+                text-align: center;
+                background: linear-gradient(to right, #222, #555);
+                color: white;
+                padding: 20px;
+                margin: 0;
+            }
+            #game-container {
+                background: #333;
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0px 0px 10px rgba(255, 255, 255, 0.2);
+                display: inline-block;
+                animation: fadeIn 1s ease-in-out;
+                max-width: 500px;
+                width: 100%;
+                position: relative;
+                z-index: 1;
+            }
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: scale(0.9);
+                }
+                to {
+                    opacity: 1;
+                    transform: scale(1);
+                }
+            }
+            input {
+                padding: 10px;
+                font-size: 16px;
+                border: 2px solid #ffcc00;
+                border-radius: 5px;
+                background: #222;
+                color: white;
+                width: 80%;
+                margin-top: 10px;
+            }
+            button {
+                padding: 10px;
+                font-size: 16px;
+                background-color: #ffcc00;
+                color: black;
+                border: none;
+                cursor: pointer;
+                transition: 0.3s;
+                margin: 5px;
+            }
+            button:hover {
+                background-color: #ffaa00;
+            }
+            .selected {
+                background-color: #ffaa00;
+            }
+            #result {
+                margin-top: 10px;
+                font-weight: bold;
+                font-size: 18px;
+            }
+            .correct {
+                color: green;
+                animation: bounce 0.5s;
+            }
+            .wrong {
+                color: red;
+                animation: shake 0.5s;
+            }
+            @keyframes bounce {
+                0%,
+                100% {
+                    transform: translateY(0);
+                }
+                50% {
+                    transform: translateY(-10px);
+                }
+            }
+            @keyframes shake {
+                0%,
+                100% {
+                    transform: translateX(0);
+                }
+                25% {
+                    transform: translateX(-5px);
+                }
+                50% {
+                    transform: translateX(5px);
+                }
+                75% {
+                    transform: translateX(-5px);
+                }
+            }
+            /* Enemies List */
+            #enemies-container {
+                margin-top: 20px;
+                display: flex;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            .enemy {
+                background: #555;
+                padding: 10px;
+                border-radius: 5px;
+                margin: 5px;
+                cursor: pointer;
+                width: 100px;
+                text-align: center;
+            }
+            .enemy.selected {
+                background: #ffcc00;
+                color: black;
+            }
+            /* Attack Type Buttons */
+            #attack-type-container {
+                margin: 10px 0;
+            }
+            /* Overlays (Champion Selection & Store) */
+            .overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.8);
+                z-index: 2;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .overlay-content {
+                background: #444;
+                padding: 20px;
+                border-radius: 10px;
+                max-width: 600px;
+                width: 90%;
+            }
+            .champion,
+            .upgrade {
+                background: #555;
+                margin: 10px;
+                padding: 15px;
+                border-radius: 5px;
+                cursor: pointer;
+                transition: background 0.3s;
+            }
+            .champion:hover,
+            .upgrade:hover {
+                background: #666;
+            }
+            .champion.selected {
+                background: #ffcc00;
+                color: black;
+            }
+            .upgrade-list {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            .upgrade {
+                width: 45%;
+                margin: 5px;
+            }
+            #player-stats {
+                margin: 10px 0;
+                font-size: 16px;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- Champion Selection Overlay -->
+        <div id="champion-overlay" class="overlay">
+            <div class="overlay-content">
+                <h2>Select Your Champion</h2>
+                <p>Each champion provides unique bonuses to help you in battle.</p>
+                <div id="champion-list">
+                    <!-- Champions will be listed here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Upgrade Shop Overlay -->
+        <div id="store-overlay" class="overlay" style="display: none">
+            <div class="overlay-content">
+                <h2>Upgrade Shop</h2>
+                <p>Spend your gold to improve your abilities!</p>
+                <div id="store-list" class="upgrade-list"></div>
+                <button onclick="closeStore()">Continue</button>
+            </div>
+        </div>
+
+        <!-- Main Game Container -->
+        <div id="game-container">
+            <h1>Ion Dungeon Crawler ⚔️</h1>
+            <div id="player-stats">
+                Player HP: <span id="player-hp">0</span> / <span id="max-hp">0</span> | Gold:
+                <span id="player-gold">0</span>
+            </div>
+            <div id="enemies-container"></div>
+            <hr />
+            <p id="ion-name">Loading question...</p>
+            <div id="attack-type-container">
+                <button id="quick-attack-btn" onclick="selectAttackType('quick')">Quick Attack</button>
+                <button id="heavy-attack-btn" onclick="selectAttackType('heavy')">Heavy Attack</button>
+            </div>
+            <input type="text" id="answer" placeholder="Enter formula with charge" onkeydown="handleKeyPress(event)" />
+            <br />
+            <button onclick="checkAnswer()">Attack!</button>
+            <p id="result"></p>
+        </div>
+
+        <script>
+            // Polyatomic Ion Data
+            const ions = {
+                Ammonium: "NH4+1",
+                Acetate: "C2H3O2-1",
+                Bicarbonate: "HCO3-1",
+                Bromate: "BrO3-1",
+                Cyanide: "CN-1",
+                Hydroxide: "OH-1",
+                Nitrate: "NO3-1",
+                Nitrite: "NO2-1",
+                Thiocyanate: "SCN-1",
+                Carbonate: "CO3-2",
+                Chromate: "CrO4-2",
+                Peroxide: "O2-2",
+                Sulfate: "SO4-2",
+                Sulfite: "SO3-2",
+                Tartrate: "C4H4O6-2",
+                Borate: "BO3-3",
+                Citrate: "C6H5O7-3",
+                Phosphate: "PO4-3",
+                Phosphite: "PO3-3",
+                Silicate: "SiO4-4"
+            };
+
+            // Enemy Pool Data (with gold drop)
+            const enemyPool = [
+                { name: "Slime", maxHp: 40, vulnerability: "quick", counter: 10, gold: 10 },
+                { name: "Goblin", maxHp: 60, vulnerability: "heavy", counter: 15, gold: 15 },
+                { name: "Skeleton", maxHp: 80, vulnerability: "quick", counter: 20, gold: 20 },
+                { name: "Troll", maxHp: 100, vulnerability: "heavy", counter: 25, gold: 25 }
+            ];
+
+            // Champion Data
+            const champions = {
+                Chemist: { hpBonus: 20, attackBonus: 0, goldBonus: 0, desc: "Balanced stats." },
+                Alchemist: { hpBonus: 0, attackBonus: 0, goldBonus: 20, desc: "Earn more gold." },
+                Elementalist: { hpBonus: 0, attackBonus: 10, goldBonus: 0, desc: "Deal extra damage." }
+            };
+
+            // Upgrade Options (one-time purchase)
+            const upgrades = [
+                {
+                    name: "Increase Max HP (+20)",
+                    cost: 50,
+                    apply: () => {
+                        maxPlayerHP += 20;
+                        playerHP += 20;
+                    }
+                },
+                {
+                    name: "Increase Base Damage (+5)",
+                    cost: 50,
+                    apply: () => {
+                        playerAttackBonus += 5;
+                    }
+                },
+                {
+                    name: "Increase Gold Gain (+10%)",
+                    cost: 50,
+                    apply: () => {
+                        playerGoldBonus += 0.1;
+                    }
+                },
+                {
+                    name: "Heal (+30 HP)",
+                    cost: 30,
+                    apply: () => {
+                        playerHP = Math.min(playerHP + 30, maxPlayerHP);
+                    }
+                }
+            ];
+
+            // Player Stats
+            let playerHP = 0;
+            let maxPlayerHP = 0;
+            let playerGold = 0;
+            let playerAttackBonus = 0;
+            let playerGoldBonus = 0;
+            let chosenChampion = null;
+
+            // Game Variables
+            let enemies = [];
+            let selectedEnemy = null;
+            let selectedAttackType = null;
+            let currentIon = "";
+
+            // Champion Selection Functions
+            function showChampionSelection() {
+                const champList = document.getElementById("champion-list");
+                champList.innerHTML = "";
+                for (let champ in champions) {
+                    const div = document.createElement("div");
+                    div.className = "champion";
+                    div.innerHTML = `<strong>${champ}</strong><br>${champions[champ].desc}`;
+                    div.onclick = () => selectChampion(champ, div);
+                    champList.appendChild(div);
+                }
+            }
+
+            function selectChampion(champ, element) {
+                chosenChampion = champ;
+                document.querySelectorAll(".champion").forEach((e) => e.classList.remove("selected"));
+                element.classList.add("selected");
+                maxPlayerHP = 100 + champions[champ].hpBonus;
+                playerHP = maxPlayerHP;
+                playerAttackBonus = champions[champ].attackBonus;
+                playerGoldBonus = champions[champ].goldBonus / 100;
+                updateStats();
+                setTimeout(() => {
+                    document.getElementById("champion-overlay").style.display = "none";
+                    initEnemies();
+                    newQuestion();
+                }, 500);
+            }
+
+            // Initialize a new wave of enemies (3 random ones)
+            function initEnemies() {
+                enemies = [];
+                let pool = enemyPool.slice();
+                for (let i = pool.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [pool[i], pool[j]] = [pool[j], pool[i]];
+                }
+                for (let i = 0; i < 3; i++) {
+                    let enemy = Object.assign({}, pool[i]);
+                    enemy.hp = enemy.maxHp;
+                    enemies.push(enemy);
+                }
+                selectedEnemy = null;
+                renderEnemies();
+            }
+
+            function renderEnemies() {
+                const container = document.getElementById("enemies-container");
+                container.innerHTML = "";
+                enemies.forEach((enemy, index) => {
+                    const enemyDiv = document.createElement("div");
+                    enemyDiv.classList.add("enemy");
+                    if (selectedEnemy === index) enemyDiv.classList.add("selected");
+                    enemyDiv.innerHTML = `<strong>${enemy.name}</strong><br>HP: ${enemy.hp}`;
+                    enemyDiv.onclick = () => selectEnemy(index);
+                    container.appendChild(enemyDiv);
+                });
+            }
+
+            function selectEnemy(index) {
+                selectedEnemy = index;
+                renderEnemies();
+            }
+
+            // Attack Type Selection
+            function selectAttackType(type) {
+                selectedAttackType = type;
+                document.getElementById("quick-attack-btn").classList.remove("selected");
+                document.getElementById("heavy-attack-btn").classList.remove("selected");
+                document.getElementById(type + "-attack-btn").classList.add("selected");
+            }
+
+            // Generate a new ion question
+            function newQuestion() {
+                if (selectedEnemy === null) {
+                    document.getElementById("result").textContent = "Please select an enemy to attack.";
+                    return;
+                }
+                if (enemies.length === 0) {
+                    // Wave cleared – show upgrade shop
+                    showStore();
+                    return;
+                }
+                const keys = Object.keys(ions);
+                currentIon = keys[Math.floor(Math.random() * keys.length)];
+                document.getElementById("ion-name").textContent = `What is the formula for ${currentIon}?`;
+                document.getElementById("answer").value = "";
+                document.getElementById("result").textContent = "";
+                selectedAttackType = null;
+                document.getElementById("quick-attack-btn").classList.remove("selected");
+                document.getElementById("heavy-attack-btn").classList.remove("selected");
+            }
+
+            // Process Answer and Combat
+            function checkAnswer() {
+                if (selectedEnemy === null) {
+                    document.getElementById("result").textContent = "Please select an enemy to attack.";
+                    return;
+                }
+                if (!selectedAttackType) {
+                    document.getElementById("result").textContent = "Please select an attack type (Quick or Heavy).";
+                    return;
+                }
+                const userAnswer = document.getElementById("answer").value.trim();
+                const resultElem = document.getElementById("result");
+                const correctAnswer = ions[currentIon];
+                let baseDamage = selectedAttackType === "quick" ? 15 : 30;
+                baseDamage += playerAttackBonus;
+                if (userAnswer === correctAnswer) {
+                    let bonus = enemies[selectedEnemy].vulnerability === selectedAttackType ? 5 : 0;
+                    const totalDamage = baseDamage + bonus;
+                    enemies[selectedEnemy].hp -= totalDamage;
+                    resultElem.textContent = `Correct! You dealt ${totalDamage} damage to ${enemies[selectedEnemy].name}.`;
+                    resultElem.className = "correct";
+                    if (enemies[selectedEnemy].hp <= 0) {
+                        resultElem.textContent += ` ${enemies[selectedEnemy].name} is defeated!`;
+                        let earnedGold = Math.floor(enemies[selectedEnemy].gold * (1 + playerGoldBonus));
+                        playerGold += earnedGold;
+                        enemies.splice(selectedEnemy, 1);
+                        selectedEnemy = null;
+                        renderEnemies();
+                    } else {
+                        renderEnemies();
+                    }
+                } else {
+                    const counterDamage = enemies[selectedEnemy].counter;
+                    playerHP -= counterDamage;
+                    resultElem.textContent = `Wrong! ${enemies[selectedEnemy].name} counterattacks and deals ${counterDamage} damage to you.`;
+                    resultElem.className = "wrong";
+                }
+                updateStats();
+                if (playerHP <= 0) {
+                    alert("Game Over! You have been defeated.");
+                    location.reload();
+                }
+                document.getElementById("answer").value = "";
+                selectedAttackType = null;
+                document.getElementById("quick-attack-btn").classList.remove("selected");
+                document.getElementById("heavy-attack-btn").classList.remove("selected");
+                setTimeout(newQuestion, 2000);
+            }
+
+            function handleKeyPress(event) {
+                if (event.key === "Enter") {
+                    checkAnswer();
+                }
+            }
+
+            function updateStats() {
+                document.getElementById("player-hp").textContent = playerHP;
+                document.getElementById("max-hp").textContent = maxPlayerHP;
+                document.getElementById("player-gold").textContent = playerGold;
+            }
+
+            // Store / Upgrade Shop
+            function showStore() {
+                const storeOverlay = document.getElementById("store-overlay");
+                const storeList = document.getElementById("store-list");
+                storeList.innerHTML = "";
+                upgrades.forEach((upgrade, index) => {
+                    const upgradeDiv = document.createElement("div");
+                    upgradeDiv.className = "upgrade";
+                    upgradeDiv.innerHTML = `<strong>${upgrade.name}</strong><br>Cost: ${upgrade.cost} Gold`;
+                    upgradeDiv.onclick = () => purchaseUpgrade(index);
+                    storeList.appendChild(upgradeDiv);
+                });
+                storeOverlay.style.display = "flex";
+            }
+
+            function purchaseUpgrade(index) {
+                const upgrade = upgrades[index];
+                if (playerGold >= upgrade.cost) {
+                    playerGold -= upgrade.cost;
+                    upgrade.apply();
+                    updateStats();
+                    alert(`Upgrade purchased: ${upgrade.name}`);
+                    upgrades.splice(index, 1);
+                    showStore();
+                } else {
+                    alert("Not enough gold for this upgrade!");
+                }
+            }
+
+            function closeStore() {
+                document.getElementById("store-overlay").style.display = "none";
+                initEnemies();
+                newQuestion();
+            }
+
+            window.onload = function () {
+                showChampionSelection();
+            };
+        </script>
+    </body>
+</html>

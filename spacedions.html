@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Ion Invaders: Quiz Shooter</title>
+        <style>
+            body {
+                margin: 0;
+                background: #000;
+                color: #fff;
+                font-family: sans-serif;
+                text-align: center;
+            }
+            #game-container {
+                margin: 20px auto;
+                max-width: 600px;
+            }
+            canvas {
+                background: #111;
+                display: block;
+                margin: 0 auto;
+                border: 2px solid #ffcc00;
+            }
+            #info {
+                margin: 10px;
+            }
+            #answer-input {
+                padding: 10px;
+                font-size: 16px;
+                width: 80%;
+                border: 2px solid #ffcc00;
+                border-radius: 5px;
+                background: #222;
+                color: #fff;
+            }
+            #restart-btn {
+                padding: 10px 20px;
+                font-size: 16px;
+                background: #ffcc00;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                display: none;
+            }
+            #restart-btn:hover {
+                background: #ffaa00;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="game-container">
+            <h1>Ion Invaders: Quiz Shooter</h1>
+            <canvas id="gameCanvas" width="600" height="400"></canvas>
+            <div id="info">
+                <p id="stats">
+                    Lives: <span id="lives">3</span> | Score: <span id="score">0</span> | Level:
+                    <span id="level">1</span> | Combo: <span id="combo">0</span>
+                </p>
+                <input
+                    type="text"
+                    id="answer-input"
+                    placeholder="Type formula and hit Enter"
+                    onkeydown="if(event.key==='Enter') checkAnswer()" />
+                <br />
+                <button id="restart-btn" onclick="restartGame()">Restart Game</button>
+            </div>
+        </div>
+        <script>
+            // --- Game Data ---
+            const ionData = {
+                Ammonium: "NH4+1",
+                Acetate: "C2H3O2-1",
+                Bicarbonate: "HCO3-1",
+                Bromate: "BrO3-1",
+                Cyanide: "CN-1",
+                Hydroxide: "OH-1",
+                Nitrate: "NO3-1",
+                Nitrite: "NO2-1",
+                Thiocyanate: "SCN-1",
+                Carbonate: "CO3-2",
+                Chromate: "CrO4-2",
+                Peroxide: "O2-2",
+                Sulfate: "SO4-2",
+                Sulfite: "SO3-2",
+                Tartrate: "C4H4O6-2",
+                Borate: "BO3-3",
+                Citrate: "C6H5O7-3",
+                Phosphate: "PO4-3",
+                Phosphite: "PO3-3",
+                Silicate: "SiO4-4"
+            };
+
+            // --- Game Variables ---
+            const canvas = document.getElementById("gameCanvas");
+            const ctx = canvas.getContext("2d");
+            const input = document.getElementById("answer-input");
+            const livesElem = document.getElementById("lives");
+            const scoreElem = document.getElementById("score");
+            const levelElem = document.getElementById("level");
+            const comboElem = document.getElementById("combo");
+            const restartBtn = document.getElementById("restart-btn");
+
+            let lives = 3;
+            let score = 0;
+            let level = 1;
+            let combo = 0;
+            let enemy = null;
+            let enemySpeed = 1.5; // base speed, increases with level
+            let animationId = null;
+            let gameOverFlag = false;
+
+            // --- Utility Functions ---
+            function getRandomIon() {
+                const keys = Object.keys(ionData);
+                const ion = keys[Math.floor(Math.random() * keys.length)];
+                return { name: ion, answer: ionData[ion] };
+            }
+
+            // --- Enemy Object ---
+            function spawnEnemy() {
+                const ion = getRandomIon();
+                enemy = {
+                    x: Math.random() * (canvas.width - 64),
+                    y: -64,
+                    width: 64,
+                    height: 64,
+                    ionName: ion.name,
+                    correctAnswer: ion.answer
+                };
+            }
+
+            // --- Game Loop ---
+            function update() {
+                if (!enemy) return;
+                enemy.y += enemySpeed;
+                // If enemy reaches bottom, lose a life and respawn enemy
+                if (enemy.y > canvas.height) {
+                    lives--;
+                    combo = 0;
+                    updateStats();
+                    spawnEnemy();
+                    if (lives <= 0) {
+                        endGame();
+                    }
+                }
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                // Draw enemy (as a rectangle with the ion name)
+                if (enemy) {
+                    ctx.fillStyle = "#ffcc00";
+                    ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+                    ctx.fillStyle = "#000";
+                    ctx.font = "12px Arial";
+                    ctx.textAlign = "center";
+                    ctx.fillText(enemy.ionName, enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
+                }
+                // (Optional: Draw spaceship at bottom)
+                ctx.fillStyle = "#00ccff";
+                ctx.fillRect(canvas.width / 2 - 20, canvas.height - 30, 40, 20);
+            }
+
+            function gameLoop() {
+                update();
+                draw();
+                animationId = requestAnimationFrame(gameLoop);
+            }
+
+            // --- Answer Processing ---
+            function checkAnswer() {
+                if (!enemy || gameOverFlag) return;
+                const userAnswer = input.value.trim();
+                if (userAnswer === "") return;
+                if (userAnswer === enemy.correctAnswer) {
+                    // Correct answer: enemy is destroyed, award points, increase combo
+                    combo++;
+                    let points = 100 * combo;
+                    score += points;
+                    // Visual explosion placeholder (flash effect)
+                    ctx.fillStyle = "#ff0000";
+                    ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+                    setTimeout(() => {
+                        /* explosion effect end */
+                    }, 100);
+                    spawnEnemy();
+                    displayFeedback("Correct! +" + points + " pts", true);
+                } else {
+                    // Wrong answer: reset combo and show feedback
+                    combo = 0;
+                    displayFeedback("Wrong answer!", false);
+                }
+                input.value = "";
+                updateStats();
+            }
+
+            // --- Stats Update ---
+            function updateStats() {
+                livesElem.textContent = lives;
+                scoreElem.textContent = score;
+                levelElem.textContent = level;
+                comboElem.textContent = combo;
+                // Increase level every 5 kills (score threshold example)
+                if (score >= level * 500) {
+                    level++;
+                    enemySpeed += 0.5;
+                    displayFeedback("Level Up! Level " + level, true);
+                }
+            }
+
+            // --- Feedback ---
+            function displayFeedback(message, isPositive) {
+                // For simplicity, we'll use alert-like text in the console.
+                console.log(message);
+                // Optionally add DOM feedback here.
+            }
+
+            // --- Game Over ---
+            function endGame() {
+                gameOverFlag = true;
+                cancelAnimationFrame(animationId);
+                restartBtn.style.display = "inline-block";
+                displayFeedback("Game Over! Final Score: " + score, false);
+            }
+
+            function restartGame() {
+                lives = 3;
+                score = 0;
+                level = 1;
+                combo = 0;
+                enemySpeed = 1.5;
+                gameOverFlag = false;
+                restartBtn.style.display = "none";
+                updateStats();
+                spawnEnemy();
+                gameLoop();
+            }
+
+            // --- Initialization ---
+            function initGame() {
+                spawnEnemy();
+                updateStats();
+                gameLoop();
+            }
+
+            window.onload = initGame;
+        </script>
+    </body>
+</html>
