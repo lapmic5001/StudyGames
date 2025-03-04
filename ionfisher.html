@@ -106,11 +106,12 @@
   </head>
   <body>
     <header>Ion Fishing: Catch Rare Ions</header>
-    <!-- Environment Selector -->
+    <!-- Environment Selector (added "Estuary") -->
     <select id="environment-select" onchange="changeEnvironment(this.value)">
       <option value="river">River</option>
       <option value="lake">Lake</option>
       <option value="ocean">Ocean</option>
+      <option value="estuary">Estuary</option>
     </select>
     <!-- Game Container -->
     <div id="game-container">
@@ -126,7 +127,7 @@
         <input type="text" id="answer-input" placeholder="Enter the formula" />
         <button id="submit-answer-btn" onclick="checkAnswer()">Submit Answer</button>
         <button id="reveal-btn" onclick="revealFormula()">Reveal Formula</button>
-        <!-- This element will show the formula when the user clicks Reveal -->
+        <!-- Revealed formula (hidden by default) -->
         <p id="revealed-formula" style="display:none; margin-top:10px; font-style: italic;"></p>
       </div>
 
@@ -249,7 +250,7 @@
         }
       ];
 
-      // Expected formulas for each ion
+      // Expected formulas for each ion (used for checking answers)
       const ionQuestions = {
         Ammonium: "NH4+1",
         Acetate: "C2H3O2-1",
@@ -276,14 +277,17 @@
       // Global game state
       let inventory = {};
       let totalCaught = 0;
-      let currentIon = null; // Holds the ion awaiting an answer
+      let currentIon = null; // Ion waiting for an answer
       let currentEnvironment = "river"; // Default environment
+      let questionCount = 0;  // Total questions asked in current session
+      let lastSeen = {};      // Tracks last question count each ion appeared
 
-      // Environment Backgrounds
+      // Environment Backgrounds (added Estuary color)
       const environmentBackgrounds = {
         river: "#87ceeb",
         lake: "#4682b4",
-        ocean: "#1e3d59"
+        ocean: "#1e3d59",
+        estuary: "#66cdaa"  // medium aquamarine
       };
 
       // Change environment: update background and currentEnvironment variable
@@ -300,31 +304,72 @@
         // Hide question container and any revealed formula from previous rounds
         document.getElementById("question-container").style.display = "none";
         document.getElementById("revealed-formula").style.display = "none";
-        // Simulate delay for fishing
         setTimeout(() => {
           catchIon();
         }, 2000);
       }
 
-      // Randomly select an ion from the current environment and ask the corresponding question
+      // Function to select an ion with pity-timer logic.
       function catchIon() {
-        let ion = null;
+        questionCount++; // Increment question counter
+
+        let possibleIons = [];
+        let threshold;
+        // Set possible ions and thresholds based on environment
         if (currentEnvironment === "river") {
-          ion = riverIons[Math.floor(Math.random() * riverIons.length)];
+          possibleIons = riverIons;
+          threshold = 10;
         } else if (currentEnvironment === "lake") {
-          ion = lakeIons[Math.floor(Math.random() * lakeIons.length)];
+          possibleIons = lakeIons;
+          threshold = 10;
         } else if (currentEnvironment === "ocean") {
-          ion = oceanIons[Math.floor(Math.random() * oceanIons.length)];
+          possibleIons = oceanIons;
+          threshold = 9;
+        } else if (currentEnvironment === "estuary") {
+          // Estuary includes all ions (from river, lake, and ocean)
+          possibleIons = [...riverIons, ...lakeIons, ...oceanIons];
+          threshold = 30;
+        }
+
+        // Force selection if any ion hasn't appeared within the threshold
+        const forcedIons = possibleIons.filter(ion => {
+          // If never seen, treat lastSeen as 0
+          return (questionCount - (lastSeen[ion.name] || 0)) >= threshold;
+        });
+
+        let ion;
+        if (forcedIons.length > 0) {
+          // Randomly choose one among those that are overdue
+          ion = forcedIons[Math.floor(Math.random() * forcedIons.length)];
+        } else {
+          // Otherwise, choose weighted by gap (the longer since last seen, the higher the weight)
+          let totalWeight = 0;
+          const weights = [];
+          possibleIons.forEach(ion => {
+            let gap = questionCount - (lastSeen[ion.name] || 0) + 1;
+            weights.push(gap);
+            totalWeight += gap;
+          });
+          let r = Math.random() * totalWeight;
+          let sum = 0;
+          for (let i = 0; i < possibleIons.length; i++) {
+            sum += weights[i];
+            if (r < sum) {
+              ion = possibleIons[i];
+              break;
+            }
+          }
         }
         currentIon = ion;
-        // Set up the question prompt and hide any revealed formula
+        lastSeen[ion.name] = questionCount; // Update last seen for the chosen ion
+
+        // Set up the question prompt
         const questionContainer = document.getElementById("question-container");
         questionContainer.style.display = "block";
         document.getElementById("question-text").textContent =
           "What is the formula for " + ion.name + "?";
         document.getElementById("answer-input").value = "";
         document.getElementById("revealed-formula").style.display = "none";
-        // Clear previous catch message
         document.getElementById("catch-msg").textContent = "";
         updateInventoryDisplay();
       }
@@ -338,7 +383,7 @@
         }
       }
 
-      // Check the user's answer against the correct formula
+      // Check the user's answer
       function checkAnswer() {
         if (!currentIon) return;
         const userAnswer = document.getElementById("answer-input").value.trim();
@@ -356,7 +401,6 @@
             };
           }
           totalCaught++;
-          // Hide the question container after a correct answer and update inventory display
           document.getElementById("question-container").style.display = "none";
           currentIon = null;
           updateInventoryDisplay();
@@ -366,16 +410,14 @@
         }
       }
 
-      // Update inventory display. When a question is active, hide formulas to prevent cheating.
+      // Update inventory display; when a question is active, hide formulas (showing "???")
       function updateInventoryDisplay() {
         const ionList = document.getElementById("ion-list");
         ionList.innerHTML = "";
-        // Check if the question container is visible
         const isQuestionActive = document.getElementById("question-container").style.display !== "none";
         for (let ion in inventory) {
           const item = document.createElement("div");
           item.className = "ion-item";
-          // Hide formula if a question is active; otherwise display normally
           const formulaDisplay = isQuestionActive ? "???" : inventory[ion].formula;
           item.innerHTML = `<strong>${ion}</strong> (${formulaDisplay}) - Caught: ${inventory[ion].count}<br><em>${inventory[ion].desc}</em>`;
           ionList.appendChild(item);
@@ -388,13 +430,15 @@
         totalCaught = 0;
         inventory = {};
         currentIon = null;
+        questionCount = 0;
+        lastSeen = {};
         updateInventoryDisplay();
         document.getElementById("catch-msg").textContent = "Your catch will appear here...";
         document.getElementById("question-container").style.display = "none";
         document.getElementById("cast-btn").disabled = false;
       }
 
-      // Initialize game (set default environment) and add Enter key listener for the answer input
+      // On load: set default environment and add Enter-key listener
       window.onload = function () {
         changeEnvironment("river");
         document.getElementById("answer-input").addEventListener("keypress", function(event) {
