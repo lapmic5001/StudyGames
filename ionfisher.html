@@ -1,275 +1,381 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Ion Fishing: Catch Rare Ions</title>
-        <style>
-            body {
-                margin: 0;
-                font-family: Arial, sans-serif;
-                background: #87ceeb;
-                color: #fff;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                padding: 20px;
-            }
-            header {
-                font-size: 2em;
-                margin-bottom: 10px;
-            }
-            #environment-select {
-                margin-bottom: 20px;
-                padding: 8px;
-                font-size: 16px;
-                border-radius: 5px;
-            }
-            #game-container {
-                background: rgba(0, 0, 50, 0.6);
-                width: 90%;
-                max-width: 600px;
-                border-radius: 10px;
-                padding: 20px;
-                text-align: center;
-            }
-            #cast-btn,
-            button#submit-answer-btn,
-            button#reset-btn {
-                padding: 15px 30px;
-                font-size: 18px;
-                border: none;
-                border-radius: 5px;
-                cursor: pointer;
-                margin: 20px 0;
-            }
-            #cast-btn {
-                background: #ffcc00;
-            }
-            #cast-btn:hover {
-                background: #ffaa00;
-            }
-            button#submit-answer-btn {
-                background: #4caf50;
-            }
-            button#submit-answer-btn:hover {
-                background: #45a049;
-            }
-            button#reset-btn {
-                background: #ff3333;
-                font-size: 16px;
-                padding: 10px 20px;
-            }
-            button#reset-btn:hover {
-                background: #cc0000;
-            }
-            #caught-display {
-                min-height: 100px;
-                margin: 20px 0;
-                padding: 10px;
-                background: rgba(255, 255, 255, 0.1);
-                border-radius: 5px;
-            }
-            #inventory {
-                margin-top: 20px;
-                text-align: left;
-            }
-            .ion-item {
-                margin-bottom: 5px;
-            }
-            .ion-name {
-                font-weight: bold;
-            }
-            /* Question container styling */
-            #question-container {
-                margin: 20px 0;
-                padding: 10px;
-                background: rgba(0, 0, 0, 0.2);
-                border-radius: 5px;
-                display: none;
-            }
-            #answer-input {
-                padding: 8px;
-                font-size: 16px;
-                border-radius: 5px;
-                border: none;
-                margin-right: 10px;
-            }
-        </style>
-    </head>
-    <body>
-        <header>Ion Fishing: Catch Rare Ions</header>
-        <!-- Environment Selector -->
-        <select id="environment-select" onchange="changeEnvironment(this.value)">
-            <option value="river">River</option>
-            <option value="lake">Lake</option>
-            <option value="ocean">Ocean</option>
-        </select>
-        <!-- Game Container -->
-        <div id="game-container">
-            <p>Cast your line to fish for ions in this environment!</p>
-            <button id="cast-btn" onclick="castLine()">Cast Line</button>
-            <div id="caught-display">
-                <p id="catch-msg">Your catch will appear here...</p>
-            </div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ion Fishing: Catch Rare Ions</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #87ceeb;
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+      }
+      header {
+        font-size: 2em;
+        margin-bottom: 10px;
+      }
+      #environment-select {
+        margin-bottom: 20px;
+        padding: 8px;
+        font-size: 16px;
+        border-radius: 5px;
+      }
+      #game-container {
+        background: rgba(0, 0, 50, 0.6);
+        width: 90%;
+        max-width: 600px;
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+      }
+      #cast-btn,
+      button#submit-answer-btn,
+      button#reset-btn {
+        padding: 15px 30px;
+        font-size: 18px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 20px 0;
+      }
+      #cast-btn {
+        background: #ffcc00;
+      }
+      #cast-btn:hover {
+        background: #ffaa00;
+      }
+      button#submit-answer-btn {
+        background: #4caf50;
+      }
+      button#submit-answer-btn:hover {
+        background: #45a049;
+      }
+      button#reset-btn {
+        background: #ff3333;
+        font-size: 16px;
+        padding: 10px 20px;
+      }
+      button#reset-btn:hover {
+        background: #cc0000;
+      }
+      #caught-display {
+        min-height: 100px;
+        margin: 20px 0;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 5px;
+      }
+      #inventory {
+        margin-top: 20px;
+        text-align: left;
+      }
+      .ion-item {
+        margin-bottom: 5px;
+      }
+      .ion-name {
+        font-weight: bold;
+      }
+      /* Question container styling */
+      #question-container {
+        margin: 20px 0;
+        padding: 10px;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 5px;
+        display: none;
+      }
+      #answer-input {
+        padding: 8px;
+        font-size: 16px;
+        border-radius: 5px;
+        border: none;
+        margin-right: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>Ion Fishing: Catch Rare Ions</header>
+    <!-- Environment Selector -->
+    <select id="environment-select" onchange="changeEnvironment(this.value)">
+      <option value="river">River</option>
+      <option value="lake">Lake</option>
+      <option value="ocean">Ocean</option>
+    </select>
+    <!-- Game Container -->
+    <div id="game-container">
+      <p>Cast your line to fish for ions in this environment!</p>
+      <button id="cast-btn" onclick="castLine()">Cast Line</button>
+      <div id="caught-display">
+        <p id="catch-msg">Your catch will appear here...</p>
+      </div>
 
-            <!-- Question Container -->
-            <div id="question-container">
-                <p id="question-text"></p>
-                <input type="text" id="answer-input" placeholder="Enter the formula" />
-                <button id="submit-answer-btn" onclick="checkAnswer()">Submit Answer</button>
-            </div>
+      <!-- Question Container -->
+      <div id="question-container">
+        <p id="question-text"></p>
+        <input type="text" id="answer-input" placeholder="Enter the formula" />
+        <button id="submit-answer-btn" onclick="checkAnswer()">Submit Answer</button>
+      </div>
 
-            <div id="inventory">
-                <h3>Inventory</h3>
-                <p>Total Ions Caught: <span id="total-count">0</span></p>
-                <div id="ion-list"></div>
-            </div>
-            <button id="reset-btn" onclick="resetGame()">Reset Game</button>
-        </div>
+      <div id="inventory">
+        <h3>Inventory</h3>
+        <p>Total Ions Caught: <span id="total-count">0</span></p>
+        <div id="ion-list"></div>
+      </div>
+      <button id="reset-btn" onclick="resetGame()">Reset Game</button>
+    </div>
 
-        <script>
-            // Ion Data: each ion has a name, formula, and description.
-            const ionData = [
-                { name: "Ammonium", formula: "NH4+1", desc: "Used in fertilizers and cleaning products." },
-                { name: "Acetate", formula: "C2H3O2-1", desc: "Found in vinegar and used in plastics." },
-                {
-                    name: "Bicarbonate",
-                    formula: "HCO3-1",
-                    desc: "Important for buffering in blood and used in baking soda."
-                },
-                { name: "Bromate", formula: "BrO3-1", desc: "Used in water treatment, though toxic in high doses." },
-                { name: "Cyanide", formula: "CN-1", desc: "A potent poison present in some seeds." },
-                { name: "Hydroxide", formula: "OH-1", desc: "Found in bases and used in cleaning agents." },
-                { name: "Nitrate", formula: "NO3-1", desc: "Common in fertilizers and explosives." },
-                { name: "Nitrite", formula: "NO2-1", desc: "Used as a food preservative and in industrial processes." },
-                { name: "Sulfate", formula: "SO4-2", desc: "Present in many minerals and industrial compounds." },
-                { name: "Phosphate", formula: "PO4-3", desc: "Vital for energy transfer in living organisms." }
-            ];
+    <script>
+      // Ion data split by environment:
+      const riverIons = [
+        { 
+          name: "Ammonium", 
+          formula: "NH4+1", 
+          desc: "A positively charged ion important in fertilizers and biological processes." 
+        },
+        { 
+          name: "Acetate", 
+          formula: "C2H3O2-1", 
+          desc: "An ion found in vinegar and used in chemical synthesis." 
+        },
+        { 
+          name: "Bicarbonate", 
+          formula: "HCO3-1", 
+          desc: "A buffering agent in blood and a component in baking soda." 
+        },
+        { 
+          name: "Bromate", 
+          formula: "BrO3-1", 
+          desc: "Used in water treatment; excessive amounts can be harmful." 
+        },
+        { 
+          name: "Cyanide", 
+          formula: "CN-1", 
+          desc: "A highly toxic ion present in some industrial processes." 
+        },
+        { 
+          name: "Hydroxide", 
+          formula: "OH-1", 
+          desc: "A basic ion used in cleaning agents and various reactions." 
+        },
+        { 
+          name: "Nitrate", 
+          formula: "NO3-1", 
+          desc: "Essential for plant growth, but can cause environmental issues if excessive." 
+        }
+      ];
 
-            // Ion Questions: maps ion names to their expected formula answers.
-            const ionQuestions = {
-                Ammonium: "NH4+1",
-                Acetate: "C2H3O2-1",
-                Bicarbonate: "HCO3-1",
-                Bromate: "BrO3-1",
-                Cyanide: "CN-1",
-                Hydroxide: "OH-1",
-                Nitrate: "NO3-1",
-                Nitrite: "NO2-1",
-                Thiocyanate: "SCN-1",
-                Carbonate: "CO3-2",
-                Chromate: "CrO4-2",
-                Peroxide: "O2-2",
-                Sulfate: "SO4-2",
-                Sulfite: "SO3-2",
-                Tartrate: "C4H4O6-2",
-                Borate: "BO3-3",
-                Citrate: "C6H5O7-3",
-                Phosphate: "PO4-3",
-                Phosphite: "PO3-3",
-                Silicate: "SiO4-4"
+      const lakeIons = [
+        { 
+          name: "Nitrite", 
+          formula: "NO2-1", 
+          desc: "A transitional nitrogen ion used in food preservation and industrial processes." 
+        },
+        { 
+          name: "Thiocyanate", 
+          formula: "SCN-1", 
+          desc: "Contains sulfur and cyanide; plays a role in several biological processes." 
+        },
+        { 
+          name: "Carbonate", 
+          formula: "CO3-2", 
+          desc: "A key component in forming limestone and regulating pH in nature." 
+        },
+        { 
+          name: "Chromate", 
+          formula: "CrO4-2", 
+          desc: "A strong oxidizing ion used in pigments and corrosion prevention." 
+        },
+        { 
+          name: "Peroxide", 
+          formula: "O2-2", 
+          desc: "A reactive oxygen ion known for its bleaching and oxidizing properties." 
+        },
+        { 
+          name: "Sulfate", 
+          formula: "SO4-2", 
+          desc: "Commonly found in minerals and used in various industrial applications." 
+        },
+        { 
+          name: "Sulfite", 
+          formula: "SO3-2", 
+          desc: "Used as a preservative in foods and wines, though it can trigger allergies." 
+        }
+      ];
+
+      const oceanIons = [
+        { 
+          name: "Tartrate", 
+          formula: "C4H4O6-2", 
+          desc: "An organic ion found in grapes and wine, used in culinary and chemical contexts." 
+        },
+        { 
+          name: "Borate", 
+          formula: "BO3-3", 
+          desc: "Derived from boron, used in glass-making and as a mild antiseptic." 
+        },
+        { 
+          name: "Citrate", 
+          formula: "C6H5O7-3", 
+          desc: "Plays a vital role in metabolism and is important in energy production." 
+        },
+        { 
+          name: "Phosphate", 
+          formula: "PO4-3", 
+          desc: "Crucial for energy transfer in cells and a key component of DNA." 
+        },
+        { 
+          name: "Phosphite", 
+          formula: "PO3-3", 
+          desc: "Less common than phosphate, used in agriculture as a fungicide." 
+        },
+        { 
+          name: "Silicate", 
+          formula: "SiO4-4", 
+          desc: "A fundamental component of the Earth’s crust, essential in geological processes." 
+        }
+      ];
+
+      // Expected formulas for each ion
+      const ionQuestions = {
+        Ammonium: "NH4+1",
+        Acetate: "C2H3O2-1",
+        Bicarbonate: "HCO3-1",
+        Bromate: "BrO3-1",
+        Cyanide: "CN-1",
+        Hydroxide: "OH-1",
+        Nitrate: "NO3-1",
+        Nitrite: "NO2-1",
+        Thiocyanate: "SCN-1",
+        Carbonate: "CO3-2",
+        Chromate: "CrO4-2",
+        Peroxide: "O2-2",
+        Sulfate: "SO4-2",
+        Sulfite: "SO3-2",
+        Tartrate: "C4H4O6-2",
+        Borate: "BO3-3",
+        Citrate: "C6H5O7-3",
+        Phosphate: "PO4-3",
+        Phosphite: "PO3-3",
+        Silicate: "SiO4-4"
+      };
+
+      // Global game state
+      let inventory = {};
+      let totalCaught = 0;
+      let currentIon = null; // Holds the ion awaiting an answer
+      let currentEnvironment = "river"; // Default environment
+
+      // Environment Backgrounds (colors may be adjusted)
+      const environmentBackgrounds = {
+        river: "#87ceeb", // light blue
+        lake: "#4682b4",  // steel blue
+        ocean: "#1e3d59"  // dark blue
+      };
+
+      // Change environment: update background and currentEnvironment variable
+      function changeEnvironment(env) {
+        document.body.style.background = environmentBackgrounds[env] || "#87ceeb";
+        currentEnvironment = env;
+      }
+
+      // Simulate casting the line
+      function castLine() {
+        const castBtn = document.getElementById("cast-btn");
+        // Disable cast button until the question is answered
+        castBtn.disabled = true;
+        document.getElementById("catch-msg").textContent = "Casting...";
+        // Hide any previous question container
+        document.getElementById("question-container").style.display = "none";
+        // Simulate delay for fishing (e.g., 2 seconds)
+        setTimeout(() => {
+          catchIon();
+        }, 2000);
+      }
+
+      // Randomly select an ion from the current environment and ask the corresponding question
+      function catchIon() {
+        let ion = null;
+        if (currentEnvironment === "river") {
+          ion = riverIons[Math.floor(Math.random() * riverIons.length)];
+        } else if (currentEnvironment === "lake") {
+          ion = lakeIons[Math.floor(Math.random() * lakeIons.length)];
+        } else if (currentEnvironment === "ocean") {
+          ion = oceanIons[Math.floor(Math.random() * oceanIons.length)];
+        }
+        currentIon = ion;
+        // Set up the question prompt
+        const questionContainer = document.getElementById("question-container");
+        questionContainer.style.display = "block";
+        document.getElementById("question-text").textContent =
+          "What is the formula for " + ion.name + "?";
+        document.getElementById("answer-input").value = "";
+        // Clear previous catch message
+        document.getElementById("catch-msg").textContent = "";
+      }
+
+      // Check the user's answer against the correct formula
+      function checkAnswer() {
+        if (!currentIon) return;
+        const userAnswer = document.getElementById("answer-input").value.trim();
+        const correctAnswer = ionQuestions[currentIon.name];
+        if (userAnswer === correctAnswer) {
+          // Correct answer: update catch message and add ion to inventory
+          document.getElementById("catch-msg").innerHTML =
+            `<span class="ion-name">${currentIon.name}</span> (${currentIon.formula})<br>${currentIon.desc} - <strong>Caught!</strong>`;
+          if (inventory[currentIon.name]) {
+            inventory[currentIon.name].count++;
+          } else {
+            inventory[currentIon.name] = {
+              formula: currentIon.formula,
+              desc: currentIon.desc,
+              count: 1
             };
+          }
+          totalCaught++;
+          updateInventoryDisplay();
+          // Hide the question container and clear current ion
+          document.getElementById("question-container").style.display = "none";
+          currentIon = null;
+          // Re-enable cast button for the next cast
+          document.getElementById("cast-btn").disabled = false;
+        } else {
+          // Incorrect answer: notify the user and allow another attempt
+          document.getElementById("catch-msg").textContent = "Incorrect answer. Try again.";
+        }
+      }
 
-            // Global game state
-            let inventory = {};
-            let totalCaught = 0;
-            let currentIon = null; // Holds the ion awaiting an answer
+      // Update inventory display on the page
+      function updateInventoryDisplay() {
+        document.getElementById("total-count").textContent = totalCaught;
+        const ionList = document.getElementById("ion-list");
+        ionList.innerHTML = "";
+        for (let ion in inventory) {
+          const item = document.createElement("div");
+          item.className = "ion-item";
+          item.innerHTML = `<strong>${ion}</strong> (${inventory[ion].formula}) - Caught: ${inventory[ion].count}<br><em>${inventory[ion].desc}</em>`;
+          ionList.appendChild(item);
+        }
+      }
 
-            // Environment Backgrounds
-            const environmentBackgrounds = {
-                river: "#87ceeb", // light blue
-                lake: "#4682b4", // steel blue
-                ocean: "#1e3d59" // dark blue
-            };
+      // Reset game state
+      function resetGame() {
+        totalCaught = 0;
+        inventory = {};
+        currentIon = null;
+        updateInventoryDisplay();
+        document.getElementById("catch-msg").textContent = "Your catch will appear here...";
+        document.getElementById("question-container").style.display = "none";
+        document.getElementById("cast-btn").disabled = false;
+      }
 
-            // Change environment function
-            function changeEnvironment(env) {
-                document.body.style.background = environmentBackgrounds[env] || "#87ceeb";
-            }
-
-            // Simulate casting the line
-            function castLine() {
-                const castBtn = document.getElementById("cast-btn");
-                // Disable cast button until the question is answered
-                castBtn.disabled = true;
-                document.getElementById("catch-msg").textContent = "Casting...";
-                // Hide any previous question container
-                document.getElementById("question-container").style.display = "none";
-                // Simulate delay for fishing (e.g., 2 seconds)
-                setTimeout(() => {
-                    catchIon();
-                }, 2000);
-            }
-
-            // Randomly select an ion and ask the corresponding question
-            function catchIon() {
-                const ion = ionData[Math.floor(Math.random() * ionData.length)];
-                currentIon = ion;
-                // Set up the question prompt
-                const questionContainer = document.getElementById("question-container");
-                questionContainer.style.display = "block";
-                document.getElementById("question-text").textContent = "What is the formula for " + ion.name + "?";
-                document.getElementById("answer-input").value = "";
-                // Clear previous catch message
-                document.getElementById("catch-msg").textContent = "";
-            }
-
-            // Check the user's answer against the correct formula
-            function checkAnswer() {
-                if (!currentIon) return;
-                const userAnswer = document.getElementById("answer-input").value.trim();
-                const correctAnswer = ionQuestions[currentIon.name];
-                if (userAnswer === correctAnswer) {
-                    // Correct answer: update catch message and add ion to inventory
-                    document.getElementById("catch-msg").innerHTML =
-                        `<span class="ion-name">${currentIon.name}</span> (${currentIon.formula})<br>${currentIon.desc} - <strong>Caught!</strong>`;
-                    if (inventory[currentIon.name]) {
-                        inventory[currentIon.name].count++;
-                    } else {
-                        inventory[currentIon.name] = { formula: currentIon.formula, desc: currentIon.desc, count: 1 };
-                    }
-                    totalCaught++;
-                    updateInventoryDisplay();
-                    // Hide the question container and clear current ion
-                    document.getElementById("question-container").style.display = "none";
-                    currentIon = null;
-                    // Re-enable cast button for the next cast
-                    document.getElementById("cast-btn").disabled = false;
-                } else {
-                    // Incorrect answer: notify the user and allow another attempt
-                    document.getElementById("catch-msg").textContent = "Incorrect answer. Try again.";
-                }
-            }
-
-            // Update inventory display on the page
-            function updateInventoryDisplay() {
-                document.getElementById("total-count").textContent = totalCaught;
-                const ionList = document.getElementById("ion-list");
-                ionList.innerHTML = "";
-                for (let ion in inventory) {
-                    const item = document.createElement("div");
-                    item.className = "ion-item";
-                    item.innerHTML = `<strong>${ion}</strong> (${inventory[ion].formula}) - Caught: ${inventory[ion].count}<br><em>${inventory[ion].desc}</em>`;
-                    ionList.appendChild(item);
-                }
-            }
-
-            // Reset game state
-            function resetGame() {
-                totalCaught = 0;
-                inventory = {};
-                currentIon = null;
-                updateInventoryDisplay();
-                document.getElementById("catch-msg").textContent = "Your catch will appear here...";
-                document.getElementById("question-container").style.display = "none";
-                document.getElementById("cast-btn").disabled = false;
-            }
-
-            // Initialize game (set default environment)
-            window.onload = function () {
-                changeEnvironment("river");
-            };
-        </script>
-    </body>
+      // Initialize game (set default environment)
+      window.onload = function () {
+        changeEnvironment("river");
+      };
+    </script>
+  </body>
 </html>
