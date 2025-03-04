@@ -3,7 +3,6 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link type="image/x-icon" href="images/ionFish_icon.png" rel="icon" />
     <title>Ion Fishing: Catch Rare Ions</title>
     <style>
       body {
@@ -36,7 +35,8 @@
       }
       #cast-btn,
       button#submit-answer-btn,
-      button#reset-btn {
+      button#reset-btn,
+      button#reveal-btn {
         padding: 15px 30px;
         font-size: 18px;
         border: none;
@@ -55,6 +55,12 @@
       }
       button#submit-answer-btn:hover {
         background: #45a049;
+      }
+      button#reveal-btn {
+        background: #0099cc;
+      }
+      button#reveal-btn:hover {
+        background: #0077aa;
       }
       button#reset-btn {
         background: #ff3333;
@@ -119,6 +125,9 @@
         <p id="question-text"></p>
         <input type="text" id="answer-input" placeholder="Enter the formula" />
         <button id="submit-answer-btn" onclick="checkAnswer()">Submit Answer</button>
+        <button id="reveal-btn" onclick="revealFormula()">Reveal Formula</button>
+        <!-- This element will show the formula when the user clicks Reveal -->
+        <p id="revealed-formula" style="display:none; margin-top:10px; font-style: italic;"></p>
       </div>
 
       <div id="inventory">
@@ -270,11 +279,11 @@
       let currentIon = null; // Holds the ion awaiting an answer
       let currentEnvironment = "river"; // Default environment
 
-      // Environment Backgrounds (colors may be adjusted)
+      // Environment Backgrounds
       const environmentBackgrounds = {
-        river: "#87ceeb", // light blue
-        lake: "#4682b4",  // steel blue
-        ocean: "#1e3d59"  // dark blue
+        river: "#87ceeb",
+        lake: "#4682b4",
+        ocean: "#1e3d59"
       };
 
       // Change environment: update background and currentEnvironment variable
@@ -286,12 +295,12 @@
       // Simulate casting the line
       function castLine() {
         const castBtn = document.getElementById("cast-btn");
-        // Disable cast button until the question is answered
         castBtn.disabled = true;
         document.getElementById("catch-msg").textContent = "Casting...";
-        // Hide any previous question container
+        // Hide question container and any revealed formula from previous rounds
         document.getElementById("question-container").style.display = "none";
-        // Simulate delay for fishing (e.g., 2 seconds)
+        document.getElementById("revealed-formula").style.display = "none";
+        // Simulate delay for fishing
         setTimeout(() => {
           catchIon();
         }, 2000);
@@ -308,14 +317,25 @@
           ion = oceanIons[Math.floor(Math.random() * oceanIons.length)];
         }
         currentIon = ion;
-        // Set up the question prompt
+        // Set up the question prompt and hide any revealed formula
         const questionContainer = document.getElementById("question-container");
         questionContainer.style.display = "block";
         document.getElementById("question-text").textContent =
           "What is the formula for " + ion.name + "?";
         document.getElementById("answer-input").value = "";
+        document.getElementById("revealed-formula").style.display = "none";
         // Clear previous catch message
         document.getElementById("catch-msg").textContent = "";
+        updateInventoryDisplay();
+      }
+
+      // Reveal button: shows the correct formula for the current ion
+      function revealFormula() {
+        if (currentIon) {
+          const revealEl = document.getElementById("revealed-formula");
+          revealEl.textContent = "The formula is: " + currentIon.formula;
+          revealEl.style.display = "block";
+        }
       }
 
       // Check the user's answer against the correct formula
@@ -324,7 +344,6 @@
         const userAnswer = document.getElementById("answer-input").value.trim();
         const correctAnswer = ionQuestions[currentIon.name];
         if (userAnswer === correctAnswer) {
-          // Correct answer: update catch message and add ion to inventory
           document.getElementById("catch-msg").innerHTML =
             `<span class="ion-name">${currentIon.name}</span> (${currentIon.formula})<br>${currentIon.desc} - <strong>Caught!</strong>`;
           if (inventory[currentIon.name]) {
@@ -337,29 +356,31 @@
             };
           }
           totalCaught++;
-          updateInventoryDisplay();
-          // Hide the question container and clear current ion
+          // Hide the question container after a correct answer and update inventory display
           document.getElementById("question-container").style.display = "none";
           currentIon = null;
-          // Re-enable cast button for the next cast
+          updateInventoryDisplay();
           document.getElementById("cast-btn").disabled = false;
         } else {
-          // Incorrect answer: notify the user and allow another attempt
           document.getElementById("catch-msg").textContent = "Incorrect answer. Try again.";
         }
       }
 
-      // Update inventory display on the page
+      // Update inventory display. When a question is active, hide formulas to prevent cheating.
       function updateInventoryDisplay() {
-        document.getElementById("total-count").textContent = totalCaught;
         const ionList = document.getElementById("ion-list");
         ionList.innerHTML = "";
+        // Check if the question container is visible
+        const isQuestionActive = document.getElementById("question-container").style.display !== "none";
         for (let ion in inventory) {
           const item = document.createElement("div");
           item.className = "ion-item";
-          item.innerHTML = `<strong>${ion}</strong> (${inventory[ion].formula}) - Caught: ${inventory[ion].count}<br><em>${inventory[ion].desc}</em>`;
+          // Hide formula if a question is active; otherwise display normally
+          const formulaDisplay = isQuestionActive ? "???" : inventory[ion].formula;
+          item.innerHTML = `<strong>${ion}</strong> (${formulaDisplay}) - Caught: ${inventory[ion].count}<br><em>${inventory[ion].desc}</em>`;
           ionList.appendChild(item);
         }
+        document.getElementById("total-count").textContent = totalCaught;
       }
 
       // Reset game state
@@ -373,9 +394,15 @@
         document.getElementById("cast-btn").disabled = false;
       }
 
-      // Initialize game (set default environment)
+      // Initialize game (set default environment) and add Enter key listener for the answer input
       window.onload = function () {
         changeEnvironment("river");
+        document.getElementById("answer-input").addEventListener("keypress", function(event) {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            checkAnswer();
+          }
+        });
       };
     </script>
   </body>
