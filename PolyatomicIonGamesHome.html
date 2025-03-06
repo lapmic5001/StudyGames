@@ -5,20 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Study Games Hub</title>
   <style>
-    /* CSS Variables for theming */
-    :root {
-      --forest-green: #228B22;
-      --grey: #777;
-      --star-black: #000;
-      --blue-ocean: #1E90FF;
-      --blue-ocean-hover: #00CED1;
-      --purple: #800080;
-      --pink: #FF69B4;
-      --empire-red: #B22222;
-      --empire-orange: #FF8C00;
-      --generic-start: #4B0082;
-      --generic-end: #8A2BE2;
-    }
     /* Global Reset & Base Styles */
     * {
       margin: 0;
@@ -26,19 +12,18 @@
       box-sizing: border-box;
     }
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: Arial, sans-serif;
       background: linear-gradient(135deg, #1f1c2c, #928dab);
       min-height: 100vh;
+      transition: background 1s ease;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      overflow-x: hidden;
-      transition: background 0.5s;
     }
-    /* Dark mode override */
+    /* Dark mode with a smooth fade */
     body.dark-mode {
-      background: #111;
+      background: linear-gradient(135deg, #111111, #444444);
     }
     header {
       text-align: center;
@@ -47,222 +32,98 @@
     }
     header h1 {
       font-size: 3em;
-      text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.7);
-      animation: fadeInDown 1s ease-out;
     }
     header p {
       font-size: 1.2em;
       margin-top: 10px;
     }
-    /* Grid Layout with 3D perspective */
+    /* Grid Layout */
     .grid-container {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 20px;
       width: 90%;
       max-width: 1200px;
-      perspective: 1000px;
     }
     /* Card Base Style */
     .card {
-      position: relative;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 15px;
-      padding: 20px;
-      text-align: center;
+      display: block;
       text-decoration: none;
       color: white;
-      font-size: 1.2em;
-      transition: transform 0.4s, box-shadow 0.4s, background 0.4s;
-      overflow: hidden;
-      border: 2px solid transparent;
-      cursor: pointer;
-      /* Fade in & slight slide from below */
-      opacity: 0;
-      transform: translateY(20px);
-      animation: cardFadeIn 0.8s forwards;
+      text-align: center;
+      padding: 20px;
+      border-radius: 10px;
+      transition: background 0.5s ease, transform 0.3s ease;
     }
-    /* Staggered animation delays */
-    .card:nth-child(1) { animation-delay: 0.2s; }
-    .card:nth-child(2) { animation-delay: 0.4s; }
-    .card:nth-child(3) { animation-delay: 0.6s; }
-    .card:nth-child(4) { animation-delay: 0.8s; }
-    .card:nth-child(5) { animation-delay: 1s; }
-    .card:nth-child(6) { animation-delay: 1.2s; }
-    .card:nth-child(7) { animation-delay: 1.4s; }
-    @keyframes cardFadeIn {
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-    /* Hover Effects: Scale, 3D Tilt, Box Shadow, and Border Transition */
     .card:hover {
-      transform: scale(1.05) rotateY(5deg);
-      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
-      border-color: rgba(255, 255, 255, 0.3);
+      transform: scale(1.03);
     }
-    /* Glassmorphism: Blurred overlay on hover */
-    .card::after {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: inherit;
-      filter: blur(8px);
-      opacity: 0;
-      transition: opacity 0.5s;
-      border-radius: 15px;
-      z-index: -1;
-    }
-    .card:hover::after {
-      opacity: 0.3;
-    }
-    /* Ripple effect on click */
-    .card:active::before {
-      content: "";
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 0;
-      height: 0;
-      background: rgba(255, 255, 255, 0.5);
-      border-radius: 50%;
-      transform: translate(-50%, -50%);
-      animation: ripple 0.6s ease-out;
-    }
-    @keyframes ripple {
-      to {
-        width: 300%;
-        height: 300%;
-        opacity: 0;
-      }
-    }
-    /* Placeholder for game image */
     .img-placeholder {
       width: 100%;
       height: 120px;
-      background: rgba(255, 255, 255, 0.2);
+      background: rgba(255,255,255,0.2);
+      border-radius: 8px;
       margin-bottom: 15px;
-      border-radius: 10px;
-      position: relative;
-      overflow: hidden;
     }
-    /* Moving grid pattern in image placeholder */
-    .img-placeholder::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background-image: linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent);
-      background-size: 50px 50px;
-      animation: movePattern 6s linear infinite;
+    /* Specific Card Colors and Hover Effects */
+    .weaponsmith {
+      background: linear-gradient(135deg, #800080, #FF69B4);
     }
-    @keyframes movePattern {
-      from { transform: translate(0, 0); }
-      to { transform: translate(50px, 50px); }
+    .weaponsmith:hover {
+      background: linear-gradient(135deg, #FF69B4, #800080);
     }
-    /* Text shadow on hover for extra flair */
-    .card span {
-      display: block;
-      transition: text-shadow 0.4s;
+    .dungeon {
+      background: #228B22;
     }
-    .card:hover span {
-      text-shadow: 2px 2px 8px rgba(0,0,0,0.7);
+    .dungeon:hover {
+      background: linear-gradient(135deg, #228B22, #777777);
     }
-    /* Specific Themes for Each Game Card */
-    /* Dungeon games: gradient from forest green to grey on hover */
-    .card.dungeon {
-      background: var(--forest-green);
+    .empire {
+      background: linear-gradient(135deg, #B22222, #FF8C00);
     }
-    .card.dungeon:hover {
-      background: linear-gradient(135deg, var(--forest-green), var(--grey));
+    .empire:hover {
+      background: linear-gradient(135deg, #FF8C00, #B22222);
     }
-    /* Space games: base black with a dotted (star) pattern */
-    .card.space {
+    .ocean {
+      background: #1E90FF;
+    }
+    .ocean:hover {
+      background: linear-gradient(135deg, #1E90FF, #00CED1);
+    }
+    .generic {
+      background: linear-gradient(135deg, #4B0082, #8A2BE2);
+    }
+    .generic:hover {
+      background: linear-gradient(135deg, #8A2BE2, #4B0082);
+    }
+    .space {
       background: #222;
-      background-image: radial-gradient(white 1px, transparent 1px);
-      background-size: 20px 20px;
     }
-    .card.space:hover {
-      background: radial-gradient(#000 20%, #000 100%), radial-gradient(white 1px, transparent 1px);
-      background-size: cover;
-      background-position: center;
+    .space:hover {
+      background: radial-gradient(circle, #000, #222);
     }
-    /* IonFisher: Ocean theme (blue to turquoise gradient) */
-    .card.ocean {
-      background: var(--blue-ocean);
-    }
-    .card.ocean:hover {
-      background: linear-gradient(135deg, var(--blue-ocean), var(--blue-ocean-hover));
-    }
-    /* IonWeaponsmith: Tech/weapon theme with purple-pink gradient and extra tilt */
-    .card.weaponsmith {
-      background: linear-gradient(135deg, var(--purple), var(--pink));
-    }
-    .card.weaponsmith:hover {
-      background: linear-gradient(135deg, var(--pink), var(--purple));
-      transform: scale(1.08) rotateY(10deg);
-    }
-    /* IonEmpire: Empire theme with red-orange gradient and brightness boost */
-    .card.empire {
-      background: linear-gradient(135deg, var(--empire-red), var(--empire-orange));
-    }
-    .card.empire:hover {
-      background: linear-gradient(135deg, var(--empire-orange), var(--empire-red));
-      filter: brightness(1.1);
-    }
-    /* Generic game: IonGame1 with a cool gradient and clip-path shape */
-    .card.generic {
-      background: linear-gradient(135deg, var(--generic-start), var(--generic-end));
-      clip-path: polygon(0 0, 100% 0, 100% 85%, 0 100%);
-    }
-    .card.generic:hover {
-      background: linear-gradient(135deg, var(--generic-end), var(--generic-start));
-      transform: scale(1.07) rotateY(7deg);
-    }
-    /* Parallax Background Animation for the whole page */
-    body::before {
-      content: "";
+    /* Dark Mode Toggle Button */
+    .toggle-btn {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: url('https://via.placeholder.com/1500') no-repeat center center fixed;
-      background-size: cover;
-      opacity: 0.1;
-      z-index: -2;
-      animation: backgroundPan 30s linear infinite;
+      bottom: 20px;
+      right: 20px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      background: #333;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.3s;
     }
-    @keyframes backgroundPan {
-      from { transform: scale(1) translateX(0); }
-      to { transform: scale(1) translateX(-100px); }
-    }
-    /* Header fadeIn animation */
-    @keyframes fadeInDown {
-      from { opacity: 0; transform: translateY(-20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    /* Responsive adjustments */
-    @media (max-width: 600px) {
-      header h1 {
-        font-size: 2em;
-      }
-      .card {
-        font-size: 1em;
-      }
+    .toggle-btn:hover {
+      background: #555;
     }
   </style>
 </head>
 <body>
   <header>
     <h1>Study Games Hub</h1>
-    <p>Click on a game to start your study adventure!</p>
+    <p>Click a game to start your study adventure!</p>
   </header>
   <div class="grid-container">
     <a href="IonWeaponsmith.html" class="card weaponsmith">
@@ -287,35 +148,15 @@
     </a>
     <a href="iongame1.html" class="card generic">
       <div class="img-placeholder"></div>
-      <span>Ion Game 1</span>
+      <span>Ion Quizzer</span>
     </a>
     <a href="spacedions.html" class="card space">
       <div class="img-placeholder"></div>
-      <span>Space Dions</span>
+      <span>Spaced Ions</span>
     </a>
   </div>
-  <script>
-    // Dark Mode Toggle Button (Advanced feature)
-    const body = document.body;
-    const toggleDarkMode = () => {
-      body.classList.toggle('dark-mode');
-    };
-    const toggleBtn = document.createElement('button');
-    toggleBtn.textContent = 'Toggle Dark Mode';
-    Object.assign(toggleBtn.style, {
-      position: 'fixed',
-      bottom: '20px',
-      right: '20px',
-      padding: '10px 20px',
-      border: 'none',
-      borderRadius: '5px',
-      background: '#333',
-      color: '#fff',
-      cursor: 'pointer',
-      boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
-    });
-    toggleBtn.addEventListener('click', toggleDarkMode);
-    document.body.appendChild(toggleBtn);
-  </script>
+  <button class="toggle-btn" onclick="document.body.classList.toggle('dark-mode')">
+    Toggle Dark Mode
+  </button>
 </body>
 </html>
