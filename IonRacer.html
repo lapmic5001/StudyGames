@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ion Racer: Quiz Racing Game</title>
+    <style>
+      /* Global Styles */
+      body {
+        margin: 0;
+        background: #222;
+        color: #fff;
+        font-family: sans-serif;
+      }
+      canvas {
+        background: #444;
+        display: block;
+        margin: 20px auto;
+        border: 3px solid #ffcc00;
+      }
+      #ui {
+        text-align: center;
+        margin-bottom: 10px;
+      }
+      #scoreBoard {
+        font-size: 1.2em;
+        margin-bottom: 10px;
+      }
+      #questionArea {
+        margin-top: 10px;
+      }
+      #questionText {
+        margin-bottom: 5px;
+      }
+      #answerInput {
+        padding: 8px;
+        font-size: 16px;
+        width: 60%;
+        border: 2px solid #ffcc00;
+        border-radius: 5px;
+        background: #333;
+        color: #fff;
+      }
+      button {
+        padding: 8px 16px;
+        font-size: 16px;
+        margin: 5px;
+        background: #ffcc00;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #ffaa00;
+      }
+      /* Main Menu Overlay */
+      #menu-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+      }
+      #menu-content {
+        background: #333;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        width: 90%;
+        max-width: 500px;
+      }
+      #leaderboard-list {
+        text-align: left;
+        max-height: 300px;
+        overflow-y: auto;
+        margin: 10px 0;
+      }
+      .leaderboard-item {
+        border-bottom: 1px solid #555;
+        padding: 5px 0;
+      }
+      /* Pit Stop Overlay */
+      #pitstop-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.85);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 9;
+      }
+      #pitstop-content {
+        background: #444;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        width: 90%;
+        max-width: 500px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Main Menu Overlay (always visible on start or when requested) -->
+    <div id="menu-overlay">
+      <div id="menu-content">
+        <h1>Ion Racer</h1>
+        <button onclick="startGame()">Start Game</button>
+        <h2>Your Leaderboard</h2>
+        <div id="leaderboard-list"></div>
+      </div>
+    </div>
+    <!-- Pit Stop Overlay -->
+    <div id="pitstop-overlay">
+      <div id="pitstop-content">
+        <h2>Pit Stop!</h2>
+        <p>Answer 3 ion questions correctly to refuel your car.</p>
+        <p id="pitstop-question">Loading question...</p>
+        <input type="text" id="pitstop-answer" placeholder="Enter answer" onkeydown="if(event.key==='Enter') pitstopCheckAnswer()" />
+        <br />
+        <button onclick="pitstopCheckAnswer()">Submit</button>
+        <p id="pitstop-feedback"></p>
+        <p>Correct Answers: <span id="pitstop-count">0</span> / 3</p>
+      </div>
+    </div>
+    <!-- Game Canvas and UI -->
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <div id="ui">
+      <div id="scoreBoard">
+        <span>Score: <span id="score">0</span></span> |
+        <span>Lives: <span id="lives">3</span></span>
+      </div>
+      <div id="questionArea">
+        <p id="questionText">Loading question...</p>
+        <input type="text" id="answerInput" placeholder="Enter answer" onkeydown="if(event.key==='Enter') checkAnswer()" />
+        <button onclick="checkAnswer()">Submit Answer</button>
+      </div>
+      <button onclick="showMenu()">Main Menu</button>
+    </div>
+
+    <script>
+      /* ---------------------
+         Global Variables & Game States
+      --------------------- */
+      let gameState = "menu"; // "menu", "playing", "pitstop", "gameover"
+      let score = 0, lives = 3;
+      let obstacles = [];
+      let lastObstacleSpawn = 0;
+      let obstacleSpawnInterval = 1500;
+      let gameOverFlag = false;
+      let lastPitStopTime = Date.now();
+      let pitStopInterval = 30000; // Trigger pit stop every 30 seconds
+      let pitstopCorrectCount = 0;
+      let gameStartTime = 0;
+      let animationId = null;
+      const keysPressed = {};
+
+      /* ---------------------
+         Player and Image Setup
+         - Player image from "images/PlayerCar.png" scaled to 64x128 (1:2 ratio).
+         - Enemy images from "images/EnemyCar1.png" and "images/EnemyCar2.png".
+      --------------------- */
+      const player = {
+        x: 0,
+        y: 0,
+        width: 64,
+        height: 128,
+        normalSpeed: 5,
+        boostSpeed: 12,
+        speed: 5,
+        boostActive: false
+      };
+      const playerImg = new Image();
+      playerImg.src = "images/PlayerCar.png";
+      const enemyImg1 = new Image();
+      enemyImg1.src = "images/EnemyCar1.png";
+      const enemyImg2 = new Image();
+      enemyImg2.src = "images/EnemyCar2.png";
+
+      /* ---------------------
+         Ion Question Data
+         (Polyatomic ions; easily swappable for other content)
+      --------------------- */
+      const ionQuestions = {
+        "Ammonium": "NH4+1",
+        "Acetate": "C2H3O2-1",
+        "Bicarbonate": "HCO3-1",
+        "Bromate": "BrO3-1",
+        "Cyanide": "CN-1",
+        "Hydroxide": "OH-1",
+        "Nitrate": "NO3-1",
+        "Nitrite": "NO2-1",
+        "Thiocyanate": "SCN-1",
+        "Carbonate": "CO3-2",
+        "Chromate": "CrO4-2",
+        "Peroxide": "O2-2",
+        "Sulfate": "SO4-2",
+        "Sulfite": "SO3-2",
+        "Tartrate": "C4H4O6-2",
+        "Borate": "BO3-3",
+        "Citrate": "C6H5O7-3",
+        "Phosphate": "PO4-3",
+        "Phosphite": "PO3-3",
+        "Silicate": "SiO4-4"
+      };
+      let currentQuestion = "";
+      let currentAnswer = "";
+      function newQuestion() {
+        const keys = Object.keys(ionQuestions);
+        const randKey = keys[Math.floor(Math.random() * keys.length)];
+        currentQuestion = randKey;
+        currentAnswer = ionQuestions[randKey];
+        questionTextElem.textContent = "What is the formula for " + currentQuestion + "?";
+        answerInput.value = "";
+      }
+      function newPitstopQuestion() {
+        const keys = Object.keys(ionQuestions);
+        const randKey = keys[Math.floor(Math.random() * keys.length)];
+        currentQuestion = randKey;
+        currentAnswer = ionQuestions[randKey];
+        document.getElementById("pitstop-question").textContent = "What is the formula for " + currentQuestion + "?";
+        document.getElementById("pitstop-answer").value = "";
+      }
+
+      /* ---------------------
+         Canvas and Drawing Functions
+      --------------------- */
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+      function drawGame() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#555";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // Draw player at bottom (using its x,y, and scaled image)
+        ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
+        // Draw obstacles (enemy cars)
+        obstacles.forEach(obs => {
+          ctx.drawImage(obs.image, obs.x, obs.y, obs.width, obs.height);
+        });
+      }
+
+      /* ---------------------
+         Update Functions
+      --------------------- */
+      function update(deltaTime) {
+        if (gameState === "playing") {
+          obstacles.forEach(obs => obs.y += obs.speed);
+          obstacles = obstacles.filter(obs => {
+            if (obs.y > canvas.height) { score += 10; return false; }
+            return true;
+          });
+          if (Date.now() - lastObstacleSpawn > obstacleSpawnInterval) {
+            spawnObstacle();
+            lastObstacleSpawn = Date.now();
+          }
+          if (keysPressed["ArrowLeft"]) {
+            player.x -= player.speed;
+            if (player.x < 0) player.x = 0;
+          }
+          if (keysPressed["ArrowRight"]) {
+            player.x += player.speed;
+            if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+          }
+          obstacles.forEach(obs => {
+            if (rectIntersect(player, obs)) {
+              lives--;
+              resetPlayer();
+              obstacles = obstacles.filter(o => o !== obs);
+              if (lives <= 0) gameOver();
+            }
+          });
+        }
+      }
+      function spawnObstacle() {
+        const obsWidth = 50, obsHeight = 100;
+        const x = Math.random() * (canvas.width - obsWidth);
+        const y = -obsHeight;
+        const speed = 4 + Math.random() * 2;
+        // Pick one enemy image once per obstacle
+        const chosenImg = Math.random() < 0.5 ? enemyImg1 : enemyImg2;
+        obstacles.push({ x, y, width: obsWidth, height: obsHeight, speed, image: chosenImg });
+      }
+      function rectIntersect(a, b) {
+        return a.x < b.x + b.width && a.x + a.width > b.x &&
+               a.y < b.y + b.height && a.y + a.height > b.y;
+      }
+      function resetPlayer() {
+        player.x = canvas.width / 2 - player.width / 2;
+        player.y = canvas.height - player.height - 10;
+      }
+
+      /* ---------------------
+         UI Update Functions
+      --------------------- */
+      const scoreElem = document.getElementById("score");
+      const livesElem = document.getElementById("lives");
+      const questionTextElem = document.getElementById("questionText");
+      const answerInput = document.getElementById("answerInput");
+      function updateUI() {
+        scoreElem.textContent = score;
+        livesElem.textContent = lives;
+      }
+
+      /* ---------------------
+         Speed Boost & Answer Handling
+      --------------------- */
+      function checkAnswer() {
+        const userAnswer = answerInput.value.trim();
+        if (!userAnswer || gameState !== "playing") return;
+        if (userAnswer === currentAnswer) {
+          score += 50;
+          activateSpeedBoost();
+        }
+        newQuestion();
+      }
+      function activateSpeedBoost() {
+        if (player.boostActive) return;
+        player.boostActive = true;
+        player.speed = player.boostSpeed;
+        setTimeout(() => {
+          player.boostActive = false;
+          player.speed = player.normalSpeed;
+        }, 2500);
+      }
+
+      /* ---------------------
+         Leaderboard Functions
+      --------------------- */
+      const leaderboardKey = "ionRacerScores";
+      function saveScore(name, score) {
+        let scores = JSON.parse(localStorage.getItem(leaderboardKey)) || [];
+        scores.push({ name, score, date: new Date().toLocaleString() });
+        scores.sort((a, b) => b.score - a.score);
+        scores = scores.slice(0, 10);
+        localStorage.setItem(leaderboardKey, JSON.stringify(scores));
+      }
+      function getScores() {
+        return JSON.parse(localStorage.getItem(leaderboardKey)) || [];
+      }
+      function updateLeaderboard() {
+        const listElem = document.getElementById("leaderboard-list");
+        listElem.innerHTML = "";
+        let scores = getScores();
+        if (scores.length === 0) {
+          listElem.innerHTML = "<p>No scores yet.</p>";
+        } else {
+          scores.forEach((entry, index) => {
+            let div = document.createElement("div");
+            div.className = "leaderboard-item";
+            div.textContent = `${index + 1}. ${entry.name} - ${entry.score} pts (${entry.date})`;
+            listElem.appendChild(div);
+          });
+        }
+      }
+      function showLeaderboard() {
+        document.getElementById("menu-overlay").style.display = "flex";
+        updateLeaderboard();
+      }
+      function hideLeaderboard() {
+        document.getElementById("menu-overlay").style.display = "none";
+      }
+
+      /* ---------------------
+         Main Menu & Game State Functions
+      --------------------- */
+      function showMenu() {
+        gameState = "menu";
+        cancelAnimationFrame(animationId);
+        document.getElementById("menu-overlay").style.display = "flex";
+        updateLeaderboard();
+      }
+      function startGame() {
+        gameState = "playing";
+        document.getElementById("menu-overlay").style.display = "none";
+        resetGameState();
+        requestAnimationFrame(gameLoop);
+      }
+      function resetGameState() {
+        score = 0;
+        lives = 3;
+        obstacles = [];
+        resetPlayer();
+        newQuestion();
+        gameStartTime = Date.now();
+        lastPitStopTime = Date.now();
+      }
+      function restartGame() {
+        showMenu();
+      }
+      function gameOver() {
+        gameState = "gameover";
+        cancelAnimationFrame(animationId);
+        let playerName = prompt("Game Over! Enter your name for the leaderboard:", "Player");
+        if (!playerName) playerName = "Anonymous";
+        saveScore(playerName, score);
+        showLeaderboard();
+      }
+
+      /* ---------------------
+         Pit Stop Mode Functions
+         Every 30 seconds, pause the game and require 3 correct answers to refuel.
+      --------------------- */
+      function enterPitStop() {
+        gameState = "pitstop";
+        document.getElementById("pitstop-overlay").style.display = "flex";
+        pitstopCorrectCount = 0;
+        document.getElementById("pitstop-count").textContent = pitstopCorrectCount;
+        newPitstopQuestion();
+      }
+      function pitstopCheckAnswer() {
+        const userAnswer = document.getElementById("pitstop-answer").value.trim();
+        const feedbackElem = document.getElementById("pitstop-feedback");
+        if (!userAnswer) return;
+        if (userAnswer === currentAnswer) {
+          pitstopCorrectCount++;
+          feedbackElem.textContent = "Correct!";
+          feedbackElem.className = "correct";
+          document.getElementById("pitstop-count").textContent = pitstopCorrectCount;
+          if (pitstopCorrectCount >= 3) exitPitStop();
+        } else {
+          feedbackElem.textContent = "Wrong!";
+          feedbackElem.className = "wrong";
+        }
+        newPitstopQuestion();
+      }
+      function exitPitStop() {
+        document.getElementById("pitstop-overlay").style.display = "none";
+        gameState = "playing";
+        lastPitStopTime = Date.now();
+      }
+
+      /* ---------------------
+         Game Loop
+      --------------------- */
+      function gameLoop(timestamp) {
+        animationId = requestAnimationFrame(gameLoop);
+        update(timestamp);
+        drawGame();
+        updateUI();
+        if (gameState === "playing" && Date.now() - lastPitStopTime > pitStopInterval) {
+          enterPitStop();
+        }
+      }
+
+      /* ---------------------
+         Input Handling
+      --------------------- */
+      window.addEventListener("keydown", (e) => { keysPressed[e.key] = true; });
+      window.addEventListener("keyup", (e) => { keysPressed[e.key] = false; });
+
+      /* ---------------------
+         Initialization
+      --------------------- */
+      window.onload = function() {
+        resetPlayer();
+        document.getElementById("menu-overlay").style.display = "flex";
+      };
+    </script>
+  </body>
+</html>
